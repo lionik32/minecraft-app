@@ -3,6 +3,6 @@
   "appName": "Minecraft Clone",
   "webDir": "www",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "http"
   }
 }
