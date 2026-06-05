@@ -1,0 +1,4838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minecraft Clone</title>
+    <style>
+        :root {
+    /* Joystick — cuadrado estilo Minecraft Bedrock */
+    --joy-size: clamp(70px, 14vw, 100px);
+--joy-knob: clamp(24px, 5vw, 36px);
+--joy-bottom: clamp(10px, 2.5vh, 28px);
+--joy-left: clamp(8px, 2vw, 18px);
+
+--slot-size: clamp(26px, 5.5vw, 38px);
+--slot-gap: clamp(2px, 0.3vw, 3px);
+--slot-border: 2px;
+--hotbar-bottom: clamp(4px, 1vh, 8px);
+--icon-size: clamp(16px, 3.5vw, 26px);
+
+--btn-size: clamp(34px, 7.5vw, 52px);
+--btn-gap: clamp(3px, 0.7vw, 6px);
+--btn-right-base: clamp(6px, 1.5vw, 14px);
+
+    /* Texto */
+    --font-menu: clamp(16px, 4vw, 34px);
+    --font-btn: clamp(13px, 3vw, 26px);
+}
+
+        /* ===== JOYSTICK — cuadrado estilo Bedrock ===== */
+        #joystick-container {
+    position: absolute;
+    bottom: var(--joy-bottom);
+    left: var(--joy-left);
+    width: var(--joy-size);
+    height: var(--joy-size);
+    background: rgba(0,0,0,0.45);
+    border: 2px solid rgba(180,180,180,0.45);
+    border-radius: 8px;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#joystick-knob {
+    width: var(--joy-knob);
+    height: var(--joy-knob);
+    background: rgba(160,160,160,0.35);
+    border: 2px solid rgba(200,200,200,0.5);
+    border-radius: 5px;
+    box-shadow: none;
+}
+
+/* ===== SPRINT — cuadrado estilo Bedrock ===== */
+#sprint-btn {
+    position: absolute;
+    width: var(--btn-size);
+    height: var(--btn-size);
+    background: rgba(0,0,0,0.45);
+    border: 2px solid rgba(180,180,180,0.45);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    z-index: 10;
+    color: rgba(200,200,200,0.9);
+    font-size: clamp(14px, 3.5vw, 22px);
+    font-weight: bold;
+    user-select: none;
+    -webkit-user-select: none;
+}
+#sprint-btn.activo {
+    background: rgba(80,80,80,0.55);
+    border-color: rgba(255,255,255,0.7);
+}
+        body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; }
+        #crosshair {
+            position: fixed; top: 50%; left: 50%; width: 20px; height: 20px;
+            transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; pointer-events: none;
+        }
+        .cross-line { position: absolute; background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 2px rgba(0, 0, 0, 0.5); }
+        .v-line { width: 2px; height: 100%; }
+        .h-line { width: 100%; height: 2px; }
+        /* ===== HOTBAR — estilo Minecraft Bedrock ===== */
+        #hotbar-container {
+    position: absolute;
+    bottom: var(--hotbar-bottom);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--slot-gap);
+    pointer-events: none;
+    align-items: center;
+    background: rgba(0,0,0,0.5);
+    padding: clamp(2px,0.5vw,5px);
+    border-radius: 3px;
+    border: 1.5px solid rgba(100,100,100,0.6);
+}
+
+.hotbar-slot {
+    width: var(--slot-size);
+    height: var(--slot-size);
+    background: rgba(30,30,30,0.75);
+    border: 1.5px solid rgba(100,100,100,0.5);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+#slot-0 {
+    background: rgba(80,80,80,0.6);
+    border: 2px solid rgba(220,220,220,0.9);
+}
+
+        /* ===== BOTONES DE ACCIÓN — cuadrados estilo Minecraft Bedrock ===== */
+        .action-button {
+    position: absolute;
+    width: var(--btn-size);
+    height: var(--btn-size);
+    background: rgba(0,0,0,0.45);
+    border: 2px solid rgba(180,180,180,0.45);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+/*
+  Layout derecho (igual que Minecraft Bedrock):
+  Col izquierda : [Sprint] fila 1, [Ataque] fila 2
+  Col derecha   : [Saltar] fila 1, [Agachar] fila 2, [Colocar] fila 3
+*/
+/* Fila base: encima de la hotbar */
+/* Fila 0 — Colocar: col derecha, encima del hotbar */
+#place-btn {
+    right: var(--btn-right-base);
+    bottom: calc(var(--hotbar-bottom) + var(--slot-size) + var(--btn-gap));
+}
+/* Fila 1 — Ataque (izq) y Agachar (der) */
+#break-btn {
+    right: calc(var(--btn-right-base) + var(--btn-size) + var(--btn-gap));
+    bottom: calc(var(--hotbar-bottom) + var(--slot-size) + var(--btn-gap) + var(--btn-size) + var(--btn-gap));
+}
+#sneak-btn {
+    position: absolute;
+    width: var(--btn-size);
+    height: var(--btn-size);
+    right: var(--btn-right-base);
+    bottom: calc(var(--hotbar-bottom) + var(--slot-size) + var(--btn-gap) + var(--btn-size) + var(--btn-gap));
+}
+/* Fila 2 — Sprint: col izquierda, centrado entre Saltar y Agachar */
+#sprint-btn {
+    right: calc(var(--btn-right-base) + var(--btn-size) + var(--btn-gap));
+    bottom: calc(var(--hotbar-bottom) + var(--slot-size) + var(--btn-gap) + 2 * (var(--btn-size) + var(--btn-gap)));
+}
+/* Fila 3 — Saltar: col derecha, arriba */
+#jump-btn {
+    right: var(--btn-right-base);
+    bottom: calc(var(--hotbar-bottom) + var(--slot-size) + var(--btn-gap) + 2 * (var(--btn-size) + var(--btn-gap)));
+}
+
+#sneak-btn.activo { background: rgba(80,80,80,0.55); border-color: rgba(255,255,255,0.7); }
+
+        /* ===== ICONOS DE BOTONES — estilo pixel Minecraft ===== */
+        .arrow-up {
+    width: 0; height: 0;
+    border-left: clamp(7px,1.8vw,12px) solid transparent;
+    border-right: clamp(7px,1.8vw,12px) solid transparent;
+    border-bottom: clamp(12px,3vw,20px) solid rgba(200,200,200,0.9);
+}
+        .plus-icon {
+    color: rgba(200,200,200,0.9);
+    font-size: clamp(20px,5.5vw,34px);
+    font-weight: bold; font-family: sans-serif; line-height: 1;
+}
+        .sword-icon-small {
+    width: clamp(18px,4.5vw,28px); height: clamp(18px,4.5vw,28px);
+    background: rgba(200,200,200,0.9);
+    clip-path: polygon(100% 0%, 80% 0%, 30% 50%, 45% 65%, 15% 65%, 15% 85%, 0% 85%, 0% 100%, 15% 100%, 35% 100%, 35% 85%, 55% 85%, 55% 70%);
+}
+
+                                                /* Iconos de la Hotbar */
+        
+
+        /* ===== INVENTARIO ===== */
+#inv-overlay {
+    display: none; position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 5000;
+    align-items: center; justify-content: center;
+}
+#inv-overlay.activo { display: flex; }
+#inv-caja {
+    width: clamp(300px, 90vw, 500px);
+    background: #c6c6c6;
+    border: 3px solid #555;
+    border-top-color: #fff; border-left-color: #fff;
+    padding: 10px; box-sizing: border-box;
+    font-family: 'Courier New', monospace;
+}
+#inv-titulo {
+    text-align: center; color: #404040;
+    font-size: clamp(10px,2.5vw,13px);
+    margin-bottom: 8px; letter-spacing: 1px;
+}
+.inv-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: clamp(2px,0.4vw,3px);
+    margin-bottom: clamp(4px,1vw,7px);
+}
+.inv-s {
+    aspect-ratio: 1; background: #8b8b8b;
+    border-top: 2px solid #373737; border-left: 2px solid #373737;
+    border-right: 2px solid #fff; border-bottom: 2px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-sizing: border-box; position: relative;
+}
+.inv-s.activo {
+    border-top: 2px solid #fff; border-left: 2px solid #fff;
+    border-right: 2px solid #373737; border-bottom: 2px solid #373737;
+    background: #aaa;
+}
+.inv-s.agarrado {
+    outline: 2px solid #fff; background: #aaa;
+}
+.inv-s.seleccionado {
+    border: 2px solid #fff;
+    box-shadow: inset 0 0 0 2px #fff;
+    background: #aaa;
+}
+.inv-s > div {
+    width: 75%; height: 75%;
+    background-size: contain; background-position: center;
+    background-repeat: no-repeat; image-rendering: pixelated;
+    pointer-events: none;
+}
+#inv-separador {
+    border-top: 2px solid #555; border-bottom: 2px solid #fff;
+    margin: 6px 0;
+}
+/* Botón ... al lado del hotbar */
+#btn-inv {
+    width: var(--slot-size, 40px); height: var(--slot-size, 40px);
+    background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5);
+    color: white; font-size: clamp(14px,3.5vw,20px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; pointer-events: auto; flex-shrink: 0;
+    letter-spacing: 1px;
+}
+/* Item flotante al arrastrar */
+#inv-drag {
+    position: fixed; pointer-events: none; z-index: 9999;
+    width: clamp(24px,6vw,38px); height: clamp(24px,6vw,38px);
+    background-size: contain; background-position: center;
+    background-repeat: no-repeat; image-rendering: pixelated;
+    display: none; transform: translate(-50%,-50%);
+}
+
+        /* ===== MODAL DE CONFIRMACIÓN ===== */
+#modal-confirmacion {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.75); z-index: 99999;
+    align-items: center; justify-content: center;
+    font-family: 'Courier New', monospace;
+}
+#modal-confirmacion.activo { display: flex; }
+.modal-caja {
+    background: #3a3a3a; border: 4px solid #000;
+    box-shadow: inset -4px -4px #222, inset 4px 4px #666;
+    padding: 28px 24px; max-width: 320px; width: 90%;
+    text-align: center; color: white;
+}
+.modal-texto {
+    font-size: clamp(13px, 3vw, 16px);
+    margin-bottom: 24px; line-height: 1.5;
+}
+.modal-botones { display: flex; gap: 10px; justify-content: center; }
+.modal-btn {
+    flex: 1; padding: 12px 8px; border: 3px solid #000; color: white;
+    font-family: 'Courier New', monospace; font-size: clamp(12px,3vw,15px);
+    cursor: pointer; box-shadow: inset -3px -3px #222, inset 3px 3px #888;
+}
+.modal-btn:active { box-shadow: inset 3px 3px #222, inset -3px -3px #888; }
+.modal-btn-si { background: #7a2020; }
+.modal-btn-no { background: #555; }
+.pantalla-menu {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #1a1a1a; display: none; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 10000;
+    font-family: 'Courier New', Courier, monospace; color: white;
+}
+.pantalla-menu.activa { display: flex; }
+.menu-titulo {
+    font-size: var(--font-menu);
+    margin-bottom: 30px;
+    text-shadow: 2px 2px #000;
+    letter-spacing: 2px;
+}
+.btn-menu {
+    width: clamp(220px, 50vw, 360px);
+    padding: clamp(12px, 2.5vw, 20px);
+    margin: 8px; background: #555;
+    border: 3px solid #000; color: white;
+    font-size: var(--font-btn); cursor: pointer;
+    text-align: center; box-shadow: inset -4px -4px #222, inset 4px 4px #888;
+    user-select: none;
+}
+.btn-menu:active { box-shadow: inset 4px 4px #222, inset -4px -4px #888; }
+.btn-volver-menu {
+    position: absolute; top: 16px; left: 16px;
+    background: #444; border: 3px solid #000; color: white;
+    font-family: 'Courier New', monospace; font-size: var(--font-btn);
+    padding: 8px 18px; cursor: pointer;
+    box-shadow: inset -3px -3px #222, inset 3px 3px #777;
+}
+/* Pestañas de Jugar */
+.tabs-container {
+    display: flex; margin-bottom: 20px;
+    border-bottom: 3px solid #888;
+}
+.tab-btn {
+    padding: clamp(8px,2vw,14px) clamp(18px,5vw,50px);
+    background: #444; border: 3px solid #000; border-bottom: none;
+    color: #aaa; font-family: 'Courier New', monospace;
+    font-size: var(--font-btn); cursor: pointer; margin-right: 4px;
+    box-shadow: inset -3px -3px #222, inset 3px 3px #666;
+}
+.tab-btn.activa { background: #666; color: white; }
+.tab-content { display: none; flex-direction: column; align-items: center; width: 100%; }
+.tab-content.activa { display: flex; }
+/* Lista de salas multijugador */
+#lista-salas {
+    width: clamp(220px, 60vw, 420px);
+    max-height: 240px; overflow-y: auto;
+    margin-bottom: 10px;
+}
+/* ===== LISTA DE MUNDOS ===== */
+#lista-mundos {
+    width: 100%; max-width: clamp(280px, 90vw, 500px);
+    max-height: 50vh; overflow-y: auto;
+    margin-bottom: 10px;
+}
+.mundo-item {
+    display: flex; align-items: center;
+    background: #555; border: 2px solid #333;
+    margin-bottom: 6px; cursor: pointer;
+    width: 100%; box-sizing: border-box;
+}
+.mundo-item:active { background: #666; }
+.mundo-item-preview {
+    width: clamp(50px,12vw,70px); height: clamp(50px,12vw,70px);
+    background: #3a7a3a; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+}
+.mundo-item-info {
+    flex: 1; padding: 8px 10px; color: white;
+    font-family: 'Courier New', monospace;
+}
+.mundo-item-nombre {
+    font-size: clamp(12px,3vw,15px);
+    font-weight: bold; margin-bottom: 3px;
+}
+.mundo-item-tipo {
+    font-size: clamp(10px,2.5vw,12px);
+    color: #aaa;
+}
+.mundo-item-fecha {
+    font-size: clamp(10px,2.5vw,12px);
+    color: #aaa; text-align: right; padding-right: 8px;
+}
+.mundo-item-editar {
+    background: #666; border-left: 2px solid #333;
+    padding: clamp(8px,2vw,14px) clamp(10px,2.5vw,16px);
+    color: white; font-size: 18px; flex-shrink: 0;
+}
+.mundo-item-editar:active { background: #888; }
+/* Panel crear/editar mundo */
+#panel-mundo {
+    display: none; position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 20000;
+    align-items: center; justify-content: center;
+    font-family: 'Courier New', monospace;
+}
+#panel-mundo.activo { display: flex; }
+#panel-mundo-caja {
+    background: #3a3a3a; border: 4px solid #000;
+    box-shadow: inset -4px -4px #222, inset 4px 4px #666;
+    padding: 24px; width: clamp(260px,80vw,400px);
+}
+#panel-mundo-titulo {
+    color: white; text-align: center;
+    font-size: clamp(13px,3vw,16px);
+    margin-bottom: 16px; letter-spacing: 1px;
+}
+#panel-mundo-nombre {
+    width: 100%; padding: 10px; box-sizing: border-box;
+    background: #222; border: 2px solid #555;
+    color: white; font-family: 'Courier New', monospace;
+    font-size: clamp(12px,3vw,15px); margin-bottom: 12px;
+    outline: none;
+}
+#panel-mundo-nombre:focus { border-color: #aaa; }
+.tipo-btn {
+    flex: 1; padding: 10px; background: #555;
+    border: 3px solid #000; color: white;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(11px,2.5vw,13px); cursor: pointer;
+    box-shadow: inset -3px -3px #222, inset 3px 3px #777;
+}
+.tipo-btn.activo {
+    background: #3a6a3a;
+    box-shadow: inset 3px 3px #222, inset -3px -3px #777;
+}
+.btn-crear-mundo {
+    background: #3a6a3a; border: 3px solid #000;
+    color: white; font-family: 'Courier New', monospace;
+    font-size: clamp(12px,3vw,15px); padding: 12px;
+    cursor: pointer; width: 100%; margin-top: 12px;
+    box-shadow: inset -3px -3px #222, inset 3px 3px #5a9a5a;
+}
+.btn-cancelar-mundo {
+    background: #555; border: 3px solid #000;
+    color: white; font-family: 'Courier New', monospace;
+    font-size: clamp(12px,3vw,15px); padding: 10px;
+    cursor: pointer; width: 100%; margin-top: 6px;
+    box-shadow: inset -3px -3px #222, inset 3px 3px #777;
+}
+
+.sala-item {
+    width: 100%; padding: clamp(10px,2vw,16px);
+    background: #444; border: 3px solid #000; color: white;
+    font-family: 'Courier New', monospace; font-size: var(--font-btn);
+    cursor: pointer; margin-bottom: 6px; box-sizing: border-box;
+    box-shadow: inset -3px -3px #222, inset 3px 3px #777;
+    text-align: left;
+}
+.sala-item:active { box-shadow: inset 3px 3px #222, inset -3px -3px #777; }
+.sala-vacia { color: #888; font-size: var(--font-btn); margin-top: 20px; }
+        #fps-counter {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    text-shadow: 1px 1px #000;
+    pointer-events: none;
+    z-index: 100;
+}
+
+
+#coords-display {
+    position: absolute;
+    top: 70px;
+    left: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: white;
+    pointer-events: none;
+    z-index: 100;
+    line-height: 1.5;
+}
+#coords-display span {
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0px 4px;
+    white-space: nowrap;
+}
+
+/* ===== PANTALLA PRINCIPAL ESTILO BEDROCK ===== */
+#pantalla-principal { background: transparent; overflow: hidden; }
+#pp-fondo {
+    position: absolute; top: 0; left: -15%;
+    width: 130%; height: 100%; z-index: 0;
+    background: linear-gradient(180deg,
+        #5ba8d0 0%, #80c4e8 13%, #a4cce6 21%,
+        #bcaad8 29%, #d4bce4 37%, #c4e878 46%,
+        #70c040 53%, #3c8820 62%, #286010 72%, #1a3c08 100%
+    );
+    animation: ppPanorama 22s ease-in-out infinite alternate;
+}
+#pp-fondo::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+        radial-gradient(ellipse at 25% 42%, rgba(210,155,230,0.55) 0%, transparent 38%),
+        radial-gradient(ellipse at 72% 36%, rgba(155,205,250,0.35) 0%, transparent 32%),
+        radial-gradient(ellipse at 50% 85%, rgba(0,0,0,0.35) 0%, transparent 45%);
+}
+@keyframes ppPanorama {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-11.5%); }
+}
+#pp-contenido {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+}
+#pp-logo {
+    text-align: center;
+    margin-bottom: clamp(28px, 6vh, 56px);
+    user-select: none;
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.7));
+}
+#pp-logo-mc {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(34px, 11vw, 86px);
+    font-weight: 900; color: #fff;
+    text-shadow: 3px 3px 0 #666, -1px -1px 0 #333, 5px 5px 0 #111, 0 0 20px rgba(0,0,0,0.5);
+    letter-spacing: clamp(3px, 1.5vw, 10px); line-height: 1;
+}
+#pp-logo-sub {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(12px, 3.5vw, 26px);
+    font-weight: bold; color: #ffe040;
+    text-shadow: 2px 2px 0 #885500, 3px 3px 0 #000;
+    letter-spacing: clamp(8px, 4vw, 22px); margin-top: 4px;
+}
+#pp-steve-canvas {
+    position: absolute;
+    right: 0; top: 0;
+    width: clamp(160px, 25vw, 350px);
+    height: 100%;
+    z-index: 2;
+    background: transparent;
+}
+#btn-vestidor {
+    position: absolute;
+    bottom: clamp(150px, 23vh, 280px);
+    right: calc(clamp(160px, 25vw, 350px) / 2 - 50px);
+    transform: none;
+    width: 80px !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    z-index: 3;
+    background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 48%, #909090 100%) !important;
+    border-top: 2px solid #e8e8e8 !important;
+    border-left: 2px solid #d8d8d8 !important;
+    border-right: 3px solid #3a3a3a !important;
+    border-bottom: 3px solid #3a3a3a !important;
+    color: #242424 !important;
+    font-weight: bold !important;
+    box-shadow: 3px 3px 8px rgba(0,0,0,0.55) !important;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.4) !important;
+    letter-spacing: 1px !important;
+    cursor: pointer !important;
+    text-align: center !important;
+}
+#pantalla-principal .btn-menu {
+    width: clamp(100px, 25vw, 200px) !important;
+    padding: clamp(6px, 1.2vw, 10px) !important;
+    font-size: clamp(11px, 2.2vw, 18px) !important;
+    background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 48%, #909090 100%);
+    border-top: 2px solid #e8e8e8; border-left: 2px solid #d8d8d8;
+    border-right: 3px solid #3a3a3a; border-bottom: 3px solid #3a3a3a;
+    color: #242424; font-weight: bold;
+    box-shadow: 3px 3px 8px rgba(0,0,0,0.55);
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.4); letter-spacing: 1px;
+}
+#pantalla-principal .btn-menu:active {
+    background: linear-gradient(180deg, #909090 0%, #b0b0b0 52%, #d0d0d0 100%);
+    border-top-color: #3a3a3a; border-left-color: #3a3a3a;
+    border-right-color: #e8e8e8; border-bottom-color: #e8e8e8;
+    box-shadow: none; transform: translateY(1px);
+}
+
+/* ===== PANTALLA VESTIDOR ===== */
+#pantalla-vestidor {
+    background: #1a1a1a !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+}
+#vest-titulo {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+#vest-contenedor {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+}
+#vest-izquierda {
+    flex: 1;
+    background: #2a2a2a;
+    padding: 60px 20px 20px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#vest-lista-skins {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.vest-skin-item {
+    background: #3a3a3a;
+    border: 2px solid #555;
+    padding: 12px;
+    cursor: pointer;
+    color: white;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(12px, 3vw, 16px);
+    border-radius: 4px;
+}
+.vest-skin-item:active {
+    background: #4a4a4a;
+    border-color: #aaa;
+}
+.vest-skin-item.seleccionado {
+    background: #555;
+    border-color: #fff;
+}
+#vest-derecha {
+    flex: 1;
+    background: #1a1a1a;
+    padding: 60px 20px 20px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#vest-steve-canvas {
+    width: 100%;
+    height: 100%;
+    max-width: 400px;
+    max-height: 400px;
+}
+    </style>
+</head>
+<body>
+    <div id="joystick-container"><div id="joystick-knob"></div></div>
+<div id="sprint-btn">❯❯</div>
+
+    <div id="fps-counter">FPS: 0</div>
+    
+    <div id="coords-display">
+    <span id="coord-xyz">X: 0  Y: 64  Z: 0</span>
+</div>
+    
+    
+
+    <!-- MODAL CONFIRMACIÓN -->
+    <div id="modal-confirmacion">
+        <div class="modal-caja">
+            <div class="modal-texto" id="modal-texto"></div>
+            <div class="modal-botones">
+                <div class="modal-btn modal-btn-si" id="modal-btn-si">Aceptar</div>
+                <div class="modal-btn modal-btn-no" onclick="cerrarModal()">Cancelar</div>
+            </div>
+        </div>
+    </div>
+    <div id="pantalla-principal" class="pantalla-menu activa">
+    <div id="pp-fondo"></div>
+    <div id="pp-contenido">
+        <div id="pp-logo">
+            <div id="pp-logo-mc">MINECRAFT</div>
+            <div id="pp-logo-sub">CLONE</div>
+        </div>
+        <div class="btn-menu" onclick="mostrarPantallaJugar()">Jugar</div>
+        <div class="btn-menu" onclick="mostrarPantallaAjustes()">Ajustes</div>
+    </div>
+    <canvas id="pp-steve-canvas"></canvas>
+    <div id="btn-vestidor" onclick="abrirVestidor()">Vestidor</div>
+</div>
+
+    <!-- PANTALLA AJUSTES -->
+    <div id="pantalla-ajustes" class="pantalla-menu">
+        <div class="menu-titulo">AJUSTES</div>
+        <div style="width:clamp(260px,85vw,420px); overflow-y:auto; max-height:70vh;">
+            <div style="background:#3a3a3a; border:3px solid #000; box-shadow:inset -3px -3px #222, inset 3px 3px #666; padding:16px; margin-bottom:12px;">
+                <div style="color:#aaa; font-size:clamp(10px,2.5vw,13px); letter-spacing:2px; margin-bottom:12px; text-align:center;">🎮 CONTROLES</div>
+
+                
+
+                <!-- Sensibilidad -->
+                <div style="color:white; font-size:clamp(11px,2.5vw,13px); margin-bottom:6px;">Sensibilidad de cámara</div>
+                <input type="range" id="aj-sens" min="1" max="20" value="6" style="width:100%; margin-bottom:6px; touch-action:pan-x;" oninput="aplicarAjustes()" onchange="aplicarAjustes()">
+
+                <div class="btn-cancelar-mundo" style="margin-top:16px;" onclick="restaurarAjustes()">↺ Restaurar por defecto</div>
+                <div class="btn-crear-mundo" style="margin-top:8px;" onclick="entrarModoEdicionControles()">🕹️ Personalizar controles</div>
+            </div>
+        </div>
+        <div class="btn-volver-menu" onclick="mostrarPantallaPrincipal()">← Volver</div>
+    </div>
+
+    <!-- PANTALLA VESTIDOR -->
+    <div id="pantalla-vestidor" class="pantalla-menu">
+        <div id="vest-titulo" class="menu-titulo">VESTIDOR</div>
+    <div class="btn-volver-menu" style="right:16px; left:auto;" onclick="confirmarSkinVestidor()">Confirmar ✓</div>
+    <div id="vest-contenedor">
+            <div id="vest-izquierda">
+                <div id="vest-lista-skins"></div>
+            </div>
+            <div id="vest-derecha">
+                <canvas id="vest-steve-canvas"></canvas>
+            </div>
+        </div>
+        <div class="btn-volver-menu" onclick="cerrarVestidor()">← Volver</div>
+    </div>
+
+    <!-- PANTALLA 2: JUGAR -->
+    <div id="pantalla-jugar" class="pantalla-menu">
+        <div class="menu-titulo">JUGAR</div>
+        <div class="tabs-container">
+            <div class="tab-btn activa" id="tab-mundos" onclick="cambiarTab('mundos')">🌍 Mundos</div>
+            <div class="tab-btn" id="tab-multi" onclick="cambiarTab('multi')">🌐 Multijugador</div>
+        </div>
+        <div class="tab-content activa" id="contenido-mundos">
+            <div class="btn-menu" style="background:#3a6a3a; margin-bottom:10px;" onclick="abrirPanelMundo()">+ Crear mundo nuevo</div>
+            <div id="lista-mundos"></div>
+        </div>
+        <div class="tab-content" id="contenido-multi">
+            <div id="estado-servidor" style="font-family:'Courier New',monospace; font-size:var(--font-btn); margin-bottom:12px; color:#ff0;">🟡 Sin conectar</div>
+            <div id="lista-salas"><div class="sala-vacia">Presiona Actualizar para buscar partidas</div></div>
+            <div class="btn-menu" onclick="actualizarSalas()">🔄 Actualizar</div>
+        </div>
+        <div class="btn-volver-menu" onclick="mostrarPantallaPrincipal()">← Volver</div>
+    </div>
+
+    <button id="btn-volver" style="
+    position:absolute; top:10px; left:10px;
+    background:rgba(0,0,0,0.6); color:white;
+    border:2px solid rgba(255,255,255,0.4);
+    border-radius:6px; padding:8px 14px;
+    font-size:14px; font-family:sans-serif;
+    pointer-events:auto; z-index:50;">
+    ← Menú
+</button>
+
+<div id="crosshair"><div class="cross-line v-line"></div><div class="cross-line h-line"></div></div>
+        <div id="jump-btn" class="action-button"><div class="arrow-up"></div></div>
+    <div id="place-btn" class="action-button"><div class="plus-icon">+</div></div>
+    <div id="break-btn" class="action-button"><div class="sword-icon-small"></div></div>
+    <div id="sneak-btn" class="action-button"><div class="arrow-up" style="transform:rotate(180deg)"></div></div>
+
+        <div id="save-load-btns" style="position:absolute; top:10px; right:10px; display:flex; gap:8px;">
+
+</div>
+<div id="hotbar-container">
+                                                <div class="hotbar-slot" id="slot-0" style="border: 4px solid white; pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-1" style="border: 4px solid rgba(139, 139, 139, 0.5); pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-2" style="pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-3" style="pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-4" style="pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-5" style="pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-6" style="pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-7" style="pointer-events: auto;"></div>
+        <div class="hotbar-slot" id="slot-8" style="pointer-events: auto;"></div>
+    <div id="btn-inv" onclick="abrirInv()">···</div>
+    </div>
+</div>
+
+<!-- PANEL CREAR/EDITAR MUNDO -->
+    <div id="panel-mundo">
+        <div id="panel-mundo-caja">
+            <div id="panel-mundo-titulo">CREAR MUNDO</div>
+            <input id="panel-mundo-nombre" type="text" placeholder="Nombre del mundo" maxlength="30">
+            <div style="display:flex; gap:8px; margin-bottom:4px;">
+                <div class="tipo-btn activo" id="tipo-plano" onclick="seleccionarTipo('plano')">🌿 Plano</div>
+                <div class="tipo-btn" id="tipo-normal" onclick="seleccionarTipo('normal')">⛰️ Normal</div>
+            </div>
+            <div class="btn-crear-mundo" id="confirmar-mundo-btn" onclick="confirmarMundo()">Crear mundo</div>
+            <div class="btn-cancelar-mundo" onclick="cerrarPanelMundo()">Cancelar</div>
+        </div>
+    </div>
+
+    <!-- INVENTARIO -->
+    <div id="inv-overlay">
+    <div id="inv-caja">
+        <div style="display:flex; align-items:center; justify-content:center; position:relative; margin-bottom:8px;">
+            <div id="inv-titulo" style="margin:0;">Inventario</div>
+            <div onclick="cerrarInv({target:document.getElementById('inv-overlay')})" style="position:absolute; right:0; cursor:pointer; font-size:18px; color:#555; font-weight:bold; font-family:monospace; line-height:1; padding:2px 6px; background:#aaa; border:2px solid #fff; border-right-color:#555; border-bottom-color:#555;">✕</div>
+        </div>
+        <div class="inv-grid" id="inv-main">
+            <div class="inv-s" data-idx="9"></div>
+<div class="inv-s" data-idx="10"></div>
+<div class="inv-s" data-idx="11"></div>
+<div class="inv-s" data-idx="12"></div>
+<div class="inv-s" data-idx="13"></div>
+<div class="inv-s" data-idx="14"></div>
+<div class="inv-s" data-idx="15"></div>
+<div class="inv-s" data-idx="16"></div>
+<div class="inv-s" data-idx="17"></div>
+            <div class="inv-s" data-idx="18"></div>
+            <div class="inv-s" data-idx="19"></div>
+            <div class="inv-s" data-idx="20"></div>
+            <div class="inv-s" data-idx="21"></div>
+            <div class="inv-s" data-idx="22"></div>
+            <div class="inv-s" data-idx="23"></div>
+            <div class="inv-s" data-idx="24"></div>
+            <div class="inv-s" data-idx="25"></div>
+            <div class="inv-s" data-idx="26"></div>
+            <div class="inv-s" data-idx="27"></div>
+            <div class="inv-s" data-idx="28"></div>
+            <div class="inv-s" data-idx="29"></div>
+            <div class="inv-s" data-idx="30"></div>
+            <div class="inv-s" data-idx="31"></div>
+            <div class="inv-s" data-idx="32"></div>
+            <div class="inv-s" data-idx="33"></div>
+            <div class="inv-s" data-idx="34"></div>
+            <div class="inv-s" data-idx="35"></div>
+        </div>
+        <div id="inv-separador"></div>
+        <div class="inv-grid" id="inv-hotbar">
+            <div class="inv-s activo" data-idx="0"></div>
+            <div class="inv-s" data-idx="1"></div>
+            <div class="inv-s" data-idx="2"></div>
+            <div class="inv-s" data-idx="3"></div>
+            <div class="inv-s" data-idx="4"></div>
+            <div class="inv-s" data-idx="5"></div>
+            <div class="inv-s" data-idx="6"></div>
+            <div class="inv-s" data-idx="7"></div>
+            <div class="inv-s" data-idx="8"></div>
+        </div>
+    </div>
+</div>
+<div id="inv-drag"></div>
+<div id="water-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,30,100,0.35); pointer-events:none; z-index:200;"></div>
+
+<!-- OVERLAY MODO EDICIÓN CONTROLES -->
+<div id="edit-controles-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:40000; flex-direction:column; align-items:center; justify-content:flex-start; pointer-events:none;">
+    <!-- Fondo semitransparente -->
+    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45);"></div>
+    <!-- Barra superior -->
+    <div style="position:relative; z-index:2; width:100%; background:rgba(0,0,0,0.8); border-bottom:2px solid #555; display:flex; flex-direction:column; box-sizing:border-box; pointer-events:auto;">
+        <!-- Fila 1: instrucción + botones -->
+        <<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px;">
+            <div style="color:#aaa; font-family:'Courier New',monospace; font-size:clamp(10px,2.5vw,13px);" id="edit-label">Toca un botón para editarlo</div>
+            <div style="display:flex; gap:6px;">
+                <div onclick="undoEdicion()" id="btn-undo" style="background:#444; border:3px solid #000; color:#aaa; font-family:'Courier New',monospace; font-size:clamp(10px,2.5vw,12px); padding:6px 10px; cursor:pointer; box-shadow:inset -2px -2px #222, inset 2px 2px #666; pointer-events:auto;">↩</div>
+                <div onclick="redoEdicion()" id="btn-redo" style="background:#444; border:3px solid #000; color:#aaa; font-family:'Courier New',monospace; font-size:clamp(10px,2.5vw,12px); padding:6px 10px; cursor:pointer; box-shadow:inset -2px -2px #222, inset 2px 2px #666; pointer-events:auto;">↪</div>
+                <div onclick="resetearPosicionesControles()" style="background:#555; border:3px solid #000; color:white; font-family:'Courier New',monospace; font-size:clamp(10px,2.5vw,12px); padding:6px 12px; cursor:pointer; box-shadow:inset -2px -2px #222, inset 2px 2px #777; pointer-events:auto;">↺ Reset</div>
+                <div onclick="salirModoEdicionControles()" style="background:#3a6a3a; border:3px solid #000; color:white; font-family:'Courier New',monospace; font-size:clamp(10px,2.5vw,12px); padding:6px 12px; cursor:pointer; box-shadow:inset -2px -2px #222, inset 2px 2px #5a9a5a; pointer-events:auto;">✓ Guardar</div>
+            </div>
+        </div>
+        <!-- Fila 2: panel de edición del botón seleccionado -->
+        <div id="edit-panel-sel" style="display:none; padding:8px 12px; border-top:1px solid #444; gap:16px; align-items:center; flex-wrap:wrap;">
+            <div style="color:#fff; font-family:'Courier New',monospace; font-size:clamp(10px,2.5vw,12px); font-weight:bold;" id="edit-sel-nombre">—</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="color:#aaa; font-family:'Courier New',monospace; font-size:clamp(9px,2vw,11px);">Tamaño</div>
+                <input type="range" id="edit-sel-size" min="30" max="90" value="52" style="width:90px; touch-action:pan-x;" oninput="aplicarEdicionSeleccionado()" onchange="aplicarEdicionSeleccionado(true)">
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="color:#aaa; font-family:'Courier New',monospace; font-size:clamp(9px,2vw,11px);">Opacidad</div>
+                <input type="range" id="edit-sel-opacity" min="5" max="100" value="45" style="width:90px; touch-action:pan-x;" oninput="aplicarEdicionSeleccionado()" onchange="aplicarEdicionSeleccionado(true)">
+            </div>
+        </div>
+    </div>
+</div>
+
+    
+    
+
+    <script type="importmap"> { "imports": { "three": "./three.module.js" } } </script>
+    <script type="module">
+        import * as THREE from 'three';
+        
+        // ===== SIMPLEX NOISE =====
+class SimplexNoise {
+    constructor(seed = 42) {
+        this.p = new Uint8Array(256);
+        for (let i = 0; i < 256; i++) this.p[i] = i;
+        let s = seed * 2147483647;
+        for (let i = 255; i > 0; i--) {
+            s = (s * 16807) % 2147483647;
+            const j = ((s % (i + 1)) + (i + 1)) % (i + 1);
+            [this.p[i], this.p[j]] = [this.p[j], this.p[i]];
+        }
+        this.perm = new Uint8Array(512);
+        for (let i = 0; i < 512; i++) this.perm[i] = this.p[i & 255];
+    }
+    fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    lerp(a, b, t) { return a + t * (b - a); }
+    grad(hash, x, y) {
+        const h = hash & 3;
+        return ((h & 1) ? -x : x) + ((h & 2) ? -y : y);
+    }
+    noise2D(x, y) {
+        const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        const u = this.fade(x), v = this.fade(y);
+        const a = this.perm[X] + Y, b = this.perm[X + 1] + Y;
+        return this.lerp(
+            this.lerp(this.grad(this.perm[a], x, y), this.grad(this.perm[b], x - 1, y), u),
+            this.lerp(this.grad(this.perm[a + 1], x, y - 1), this.grad(this.perm[b + 1], x - 1, y - 1), u),
+            v
+        );
+    }
+}
+let noise = new SimplexNoise(42);
+        
+
+        // 1. ESCENA Y CONFIGURACIÓN BÁSICA
+                const scene = new THREE.Scene();
+        // Un azul cielo más brillante (Light Sky Blue)
+        scene.background = new THREE.Color(0xa0e6ff);
+scene.fog = new THREE.Fog(0xa0e6ff, 55, 65);
+
+
+                // Cambiamos 0.1 por 0.01 para que no atraviese los bloques al acercarte
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+// ===== FACE CULLING =====
+const gl = renderer.getContext();
+gl.enable(gl.CULL_FACE);
+gl.cullFace(gl.BACK);
+gl.frontFace(gl.CCW);
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+ 
+        document.body.appendChild(renderer.domElement);
+
+
+                // Luz ambiental suave para que las sombras no sean negras puras
+                // Subimos la luz ambiental a 0.8 para que las zonas de sombra no sean tan oscuras
+        // Sin luces dinámicas - el brillo lo controlamos por cara como Minecraft
+const luzAmbiente = new THREE.AmbientLight(0xffffff, 1.0);
+scene.add(luzAmbiente);
+
+        // Subimos la luz del Sol a 1.2 para que los colores brillen más
+        
+
+        
+                // 2. TEXTURAS Y MATERIALES (CON COLORES VIVOS)
+        const loader = new THREE.TextureLoader();
+
+// ===== ATLAS DE TEXTURAS (5x4 = 20 texturas de 16x16) =====
+// Orden: fila 0: dirt, stone, planks_oak, sand, iron_block
+//        fila 1: brick, log_oak_top, log_oak, glass, grass_carried
+//        fila 2: grass_side_carried, c_red, c_black, c_silver, c_yellow
+//        fila 3: c_light_blue, c_orange, c_magenta, c_lime, c_brown
+const ATLAS_COLS = 5;
+const ATLAS_ROWS = 4;
+const ATLAS_TILE = 16;
+const ATLAS_W = ATLAS_COLS * ATLAS_TILE; // 80
+const ATLAS_H = ATLAS_ROWS * ATLAS_TILE; // 64
+
+const atlasArchivos = [
+    'dirt.png', 'stone.png', 'planks_oak.png', 'sand.png', 'iron_block.png',
+    'brick.png', 'log_oak_top.png', 'log_oak.png', 'glass.png', 'grass_carried.png',
+    'grass_side_carried.png', 'concrete_red.png', 'concrete_black.png', 'concrete_silver.png', 'concrete_yellow.png',
+    'concrete_light_blue.png', 'concrete_orange.png', 'concrete_magenta.png', 'concrete_lime.png', 'concrete_brown.png'
+];
+
+// Índice de cada textura en el atlas
+const ATLAS_IDX = {};
+atlasArchivos.forEach((nombre, i) => { ATLAS_IDX[nombre] = i; });
+
+// Calcular UVs de una celda del atlas (devuelve {u0,v0,u1,v1})
+function atlasUV(idx) {
+    const col = idx % ATLAS_COLS;
+    const row = Math.floor(idx / ATLAS_COLS);
+    const pad = 0.45 / ATLAS_TILE;
+    return {
+        u0: (col * ATLAS_TILE + pad) / ATLAS_W,
+        u1: ((col + 1) * ATLAS_TILE - pad) / ATLAS_W,
+        v0: 1 - ((row + 1) * ATLAS_TILE - pad) / ATLAS_H,
+        v1: 1 - (row * ATLAS_TILE + pad) / ATLAS_H
+    };
+}
+
+let atlasTexture = null;
+let atlasListo = false;
+
+function cargarAtlas() {
+    return new Promise((resolve) => {
+        const cv = document.createElement('canvas');
+        cv.width = ATLAS_W;
+        cv.height = ATLAS_H;
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        let cargadas = 0;
+        atlasArchivos.forEach((archivo, i) => {
+            const img = new Image();
+            img.onload = () => {
+                const col = i % ATLAS_COLS;
+                const row = Math.floor(i / ATLAS_COLS);
+                ctx.drawImage(img, 0, 0, 16, 16, col * ATLAS_TILE, row * ATLAS_TILE, ATLAS_TILE, ATLAS_TILE);
+                cargadas++;
+                if (cargadas === atlasArchivos.length) {
+                    atlasTexture = new THREE.CanvasTexture(cv);
+                    atlasTexture.magFilter = THREE.NearestFilter;
+atlasTexture.minFilter = THREE.NearestMipmapLinearFilter;
+atlasTexture.colorSpace = THREE.SRGBColorSpace;
+atlasTexture.generateMipmaps = true;
+                    atlasTexture.wrapS = THREE.ClampToEdgeWrapping;
+                    atlasTexture.wrapT = THREE.ClampToEdgeWrapping;
+                    atlasListo = true;
+                    
+                    resolve(atlasTexture);
+                }
+            };
+            img.onerror = () => {
+                
+                cargadas++;
+                if (cargadas === atlasArchivos.length) resolve(atlasTexture);
+            };
+            img.src = archivo;
+        });
+    });
+}
+
+        const texSide = loader.load('grass_side_carried.png');
+const texTop = loader.load('grass_carried.png');
+const texBottom = loader.load('dirt.png');
+const texStone = loader.load('stone.png');
+const texWood = loader.load('planks_oak.png');
+
+        [texSide, texTop, texBottom, texStone, texWood].forEach(t => {
+    t.magFilter = t.minFilter = THREE.NearestFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.generateMipmaps = false;
+});
+
+// ===== DEFINICIÓN DE UVs POR BLOQUE EN EL ATLAS =====
+// Cada bloque define qué textura del atlas usa en cada cara
+// Orden de caras Three.js: +X, -X, +Y, -Y, +Z, -Z
+// Índices del atlas (ver atlasArchivos arriba):
+// 0=dirt, 1=stone, 2=planks_oak, 3=sand, 4=iron_block
+// 5=brick, 6=log_oak_top, 7=log_oak, 8=glass, 9=grass_carried
+// 10=grass_side_carried, 11=c_red, 12=c_black, 13=c_silver, 14=c_yellow
+// 15=c_light_blue, 16=c_orange, 17=c_magenta, 18=c_lime, 19=c_brown
+
+const BLOCK_UVS = {
+    // [+X, -X, +Y, -Y, +Z, -Z]
+    grass:    [10, 10,  9,  0, 10, 10],
+    dirt:     [ 0,  0,  0,  0,  0,  0],
+    stone:    [ 1,  1,  1,  1,  1,  1],
+    wood:     [ 2,  2,  2,  2,  2,  2],
+    sand:     [ 3,  3,  3,  3,  3,  3],
+    iron:     [ 4,  4,  4,  4,  4,  4],
+    brick:    [ 5,  5,  5,  5,  5,  5],
+    oaklog:   [ 7,  7,  6,  6,  7,  7],
+    c_red:    [11, 11, 11, 11, 11, 11],
+    c_black:  [12, 12, 12, 12, 12, 12],
+    c_lgray:  [13, 13, 13, 13, 13, 13],
+    c_yellow: [14, 14, 14, 14, 14, 14],
+    c_lblue:  [15, 15, 15, 15, 15, 15],
+    c_orange: [16, 16, 16, 16, 16, 16],
+    c_magenta:[17, 17, 17, 17, 17, 17],
+    c_lime:   [18, 18, 18, 18, 18, 18],
+    c_brown:  [19, 19, 19, 19, 19, 19],
+};
+
+
+        // Colores por cara estilo Minecraft
+// Brillo fijo por cara estilo Minecraft
+const B_TOP    = 1.0;
+const B_NS     = 0.8;
+const B_EW     = 0.6;
+const B_BOTTOM = 0.5;
+
+// ===== MATERIAL ÚNICO DEL ATLAS =====
+// Se crea con una textura placeholder y se actualiza cuando el atlas cargue
+const atlasMaterial = new THREE.MeshBasicMaterial({
+    map: null,
+    side: THREE.FrontSide,
+    vertexColors: true
+});
+
+function actualizarAtlasMaterial(tex) {
+    atlasMaterial.map = tex;
+    atlasMaterial.needsUpdate = true;
+}
+
+function crearMeshManual(matType) {
+    const mat = materialPorNombre[matType];
+    const m = new THREE.Mesh(geometry, mat || materials);
+    m.userData.matType = matType;
+    return m;
+}
+    
+
+function crearMateriales(texTop, texSide, texBottom) {
+    return [
+        new THREE.MeshBasicMaterial({
+            map: texSide,
+            color: new THREE.Color(B_EW, B_EW, B_EW),
+            side: THREE.FrontSide
+        }),
+
+        new THREE.MeshBasicMaterial({
+            map: texSide,
+            color: new THREE.Color(B_EW, B_EW, B_EW),
+            side: THREE.FrontSide
+        }),
+
+        new THREE.MeshBasicMaterial({
+            map: texTop,
+            color: new THREE.Color(B_TOP, B_TOP, B_TOP),
+            side: THREE.FrontSide
+        }),
+
+        new THREE.MeshBasicMaterial({
+            map: texBottom,
+            color: new THREE.Color(B_BOTTOM, B_BOTTOM, B_BOTTOM),
+            side: THREE.FrontSide
+        }),
+
+        new THREE.MeshBasicMaterial({
+            map: texSide,
+            color: new THREE.Color(B_NS, B_NS, B_NS),
+            side: THREE.FrontSide
+        }),
+
+        new THREE.MeshBasicMaterial({
+            map: texSide,
+            color: new THREE.Color(B_NS, B_NS, B_NS),
+            side: THREE.FrontSide
+        }),
+    ];
+}
+
+function crearMaterialesUniformes(tex) {
+    return crearMateriales(tex, tex, tex);
+}
+
+const materials    = crearMateriales(texTop, texSide, texBottom);
+const stoneMaterial = crearMaterialesUniformes(texStone);
+const woodMaterial  = crearMaterialesUniformes(texWood);
+
+// Guardamos todos los materiales para poder actualizar su brillo
+const texDirt = loader.load('dirt.png');
+texDirt.magFilter = texDirt.minFilter = THREE.NearestFilter;
+texDirt.colorSpace = THREE.SRGBColorSpace;
+texDirt.generateMipmaps = false;
+const dirtMaterial = crearMaterialesUniformes(texDirt);
+
+
+
+const texGlassBlock = loader.load('glass.png');
+texGlassBlock.magFilter = texGlassBlock.minFilter = THREE.NearestFilter;
+texGlassBlock.colorSpace = THREE.SRGBColorSpace;
+texGlassBlock.generateMipmaps = false;
+
+const _glassOpts = (c) => ({
+    map: texGlassBlock,
+    transparent: true,
+    alphaTest: 0.5,
+    depthWrite: true,
+    side: THREE.FrontSide,
+    color: new THREE.Color(c, c, c),
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -4
+});
+const glassMaterial = [
+    new THREE.MeshBasicMaterial(_glassOpts(B_EW)),
+    new THREE.MeshBasicMaterial(_glassOpts(B_EW)),
+    new THREE.MeshBasicMaterial(_glassOpts(B_TOP)),
+    new THREE.MeshBasicMaterial(_glassOpts(B_BOTTOM)),
+    new THREE.MeshBasicMaterial(_glassOpts(B_NS)),
+    new THREE.MeshBasicMaterial(_glassOpts(B_NS)),
+];
+
+    
+
+const texSand = loader.load('sand.png');
+texSand.magFilter = texSand.minFilter = THREE.NearestFilter;
+texSand.colorSpace = THREE.SRGBColorSpace;
+texSand.generateMipmaps = false;
+const sandMaterial = crearMaterialesUniformes(texSand);
+
+const texWaterStill = loader.load('water_still.png');
+const texWaterFlow  = loader.load('water_flow.png');
+[texWaterStill, texWaterFlow].forEach(t => {
+    t.magFilter = t.minFilter = THREE.NearestFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.generateMipmaps = false;
+});
+// Mostrar solo el primer fotograma de cada textura animada
+texWaterFlow.repeat.set(1, 1/32);
+texWaterFlow.offset.set(0, 31/32);
+texWaterStill.repeat.set(1, 1/32);
+texWaterStill.offset.set(0, 31/32);
+
+// Animar agua cada frame
+let waterAnimFrame = 0;
+const WATER_FRAMES = 32;
+setInterval(() => {
+    waterAnimFrame = (waterAnimFrame + 1) % WATER_FRAMES;
+    const frameOffset = (WATER_FRAMES - 1 - waterAnimFrame) / WATER_FRAMES;
+    texWaterStill.offset.set(0, frameOffset);
+    texWaterFlow.offset.set(0, frameOffset);
+    texWaterFlowX.offset.set(frameOffset, 0);
+    texWaterStill.needsUpdate = true;
+    texWaterFlow.needsUpdate = true;
+    texWaterFlowX.needsUpdate = true;
+}, 66); // ~15fps de animación, igual que Bedrock
+
+const texWaterFlowX = texWaterFlow.clone();
+texWaterFlowX.needsUpdate = true;
+texWaterFlowX.repeat.set(1/32, 1);
+texWaterFlowX.offset.set(0, 0);
+
+const _waterOpts = (map, c) => ({
+    map, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide,
+    color: new THREE.Color(c, c, c),
+    polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8
+});
+const waterMaterial = [
+    new THREE.MeshBasicMaterial(_waterOpts(texWaterStill, B_EW)),
+    new THREE.MeshBasicMaterial(_waterOpts(texWaterStill, B_EW)),
+    new THREE.MeshBasicMaterial(_waterOpts(texWaterStill, B_TOP)),
+    new THREE.MeshBasicMaterial(_waterOpts(texWaterStill, B_BOTTOM)),
+    new THREE.MeshBasicMaterial(_waterOpts(texWaterStill, B_NS)),
+    new THREE.MeshBasicMaterial(_waterOpts(texWaterStill, B_NS)),
+];
+
+// Combinamos todos los materiales en una sola lista para el sistema de iluminación
+const texIron = loader.load('iron_block.png');
+const texBrick = loader.load('brick.png');
+texBrick.magFilter = texBrick.minFilter = THREE.NearestFilter;
+texBrick.colorSpace = THREE.SRGBColorSpace;
+texBrick.generateMipmaps = false;
+texIron.colorSpace = THREE.SRGBColorSpace;
+texIron.generateMipmaps = false;
+const ironMaterial = crearMaterialesUniformes(texIron);
+const brickMaterial = crearMaterialesUniformes(texBrick);
+const texCRed     = loader.load('concrete_red.png');
+const texCBlack   = loader.load('concrete_black.png');
+const texCLGray   = loader.load('concrete_silver.png');
+const texCYellow  = loader.load('concrete_yellow.png');
+const texCLBlue   = loader.load('concrete_light_blue.png');
+const texCOrange  = loader.load('concrete_orange.png');
+const texCMagenta = loader.load('concrete_magenta.png');
+const texCLime    = loader.load('concrete_lime.png');
+const texCBrown   = loader.load('concrete_brown.png');
+
+[texCRed, texCBlack, texCLGray, texCYellow, texCLBlue, texCOrange, texCMagenta, texCLime, texCBrown].forEach(t => {
+    t.magFilter = t.minFilter = THREE.NearestFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.generateMipmaps = false;
+});
+
+const matCRed     = crearMaterialesUniformes(texCRed);
+const matCBlack   = crearMaterialesUniformes(texCBlack);
+const matCLGray   = crearMaterialesUniformes(texCLGray);
+const matCYellow  = crearMaterialesUniformes(texCYellow);
+const matCLBlue   = crearMaterialesUniformes(texCLBlue);
+const matCOrange  = crearMaterialesUniformes(texCOrange);
+const matCMagenta = crearMaterialesUniformes(texCMagenta);
+const matCLime    = crearMaterialesUniformes(texCLime);
+const matCBrown   = crearMaterialesUniformes(texCBrown);
+
+const texOakLogTop = loader.load('log_oak_top.png');
+texOakLogTop.magFilter = texOakLogTop.minFilter = THREE.NearestFilter;
+texOakLogTop.colorSpace = THREE.SRGBColorSpace;
+texOakLogTop.generateMipmaps = false;
+const texOakLogSide = loader.load('log_oak.png');
+texOakLogSide.magFilter = texOakLogSide.minFilter = THREE.NearestFilter;
+texOakLogSide.colorSpace = THREE.SRGBColorSpace;
+texOakLogSide.generateMipmaps = false;
+const oakLogMaterial = crearMateriales(texOakLogTop, texOakLogSide, texOakLogTop);
+
+function crearMaterialesHojas(tex) {
+    const brightValues = [B_EW, B_EW, B_TOP, B_BOTTOM, B_NS, B_NS];
+    return brightValues.map(b => new THREE.MeshBasicMaterial({
+        map: tex,
+        color: new THREE.Color(b, b, b),
+        transparent: true,
+        alphaTest: 0.5,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4
+    }));
+}
+const texLeaves = loader.load('leaves_oak.png');
+texLeaves.magFilter = texLeaves.minFilter = THREE.NearestFilter;
+texLeaves.colorSpace = THREE.SRGBColorSpace;
+texLeaves.generateMipmaps = false;
+const oakLeavesMaterial = crearMaterialesHojas(texLeaves);
+oakLeavesMaterial.forEach(m => { m.color.set(0x48b518); });
+
+const todosMateriales = [...materials, ...stoneMaterial, ...woodMaterial, ...dirtMaterial, ...glassMaterial, ...sandMaterial, ...ironMaterial, ...oakLogMaterial, ...oakLeavesMaterial, ...brickMaterial,
+    ...matCRed, ...matCBlack, ...matCLGray, ...matCYellow, ...matCLBlue, ...matCOrange, ...matCMagenta, ...matCLime, ...matCBrown, ...waterMaterial];
+
+
+
+
+
+                        // 3. TERRENO INFINITO POR CHUNKS
+        const CHUNK_SIZE = 16;
+        const RENDER_DISTANCE_CHUNKS = 4;
+        const capasTierra = 4;
+        const MAX_PROFUNDIDAD_PIEDRA = 10;
+        const FONDO_Y = -0;
+
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        function createInstancedMesh(positions, material) {
+    if (!positions || positions.length === 0) return null;
+    const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
+    const dummyMat = new THREE.Matrix4();
+    positions.forEach((pos, idx) => {
+        dummyMat.compose(new THREE.Vector3(pos.x, pos.y, pos.z), new THREE.Quaternion(), new THREE.Vector3(1, 1, 1));
+        mesh.setMatrixAt(idx, dummyMat);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.frustumCulled = false;
+    return mesh;
+}
+        const dummy = new THREE.Object3D();
+
+        function getAltura(x, z, tipo) {
+            if (tipo === 'plano') return 0;
+
+            // Capa 1: continental (escala muy grande) → montañas y valles
+            const n1 = noise.noise2D(x * 0.003, z * 0.003) * 60;
+            // Capa 2: colinas (escala media)
+            const n2 = noise.noise2D(x * 0.015, z * 0.015) * 20;
+            // Capa 3: rugosidad superficial (escala pequeña)
+            const n3 = noise.noise2D(x * 0.06, z * 0.06) * 5;
+
+            // Base en Y=63 igual que Minecraft Bedrock
+            return Math.round(63 + n1 + n2 + n3);
+        }
+
+        // ===== CHUNK MANAGER =====
+        const activeChunks = new Map();
+        let tipoMundoChunks = 'plano';
+
+        function chunkKey(cx, cz) { return `${cx},${cz}`; }
+
+                function cargarChunk(cx, cz, tipo, forzar = false) {
+    const key = chunkKey(cx, cz);
+    if (activeChunks.has(key) && !forzar) return;
+
+    const blocks = [];
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+            const wx = cx * CHUNK_SIZE + lx;
+            const wz = cz * CHUNK_SIZE + lz;
+            const h = getAltura(wx, wz, tipo);
+            const capasT = tipo === 'plano' ? 3 : capasTierra;
+            const capasP = tipo === 'plano' ? 3 : MAX_PROFUNDIDAD_PIEDRA;
+            let piedraStart = h - capasT - capasP;
+            const yStart = tipo === 'plano' ? piedraStart : Math.max(FONDO_Y, piedraStart);
+            for (let y = yStart; y <= h; y++) {
+                let matType;
+                if (y === h) matType = 'grass';
+                else if (y >= h - capasT) matType = 'dirt';
+                else if (y >= piedraStart) matType = 'stone';
+                else continue;
+                if (!brokenTerrain.has(`${wx},${y},${wz}`)) {
+                    blocks.push({ x: wx, y: y, z: wz, matType });
+                }
+            }
+        }
+    }
+
+    const blockSet = new Set();
+    for (const b of blocks) blockSet.add(`${b.x},${b.y},${b.z}`);
+
+    function isSolid(x, y, z) {
+        const k = `${x},${y},${z}`;
+        if (brokenTerrain.has(k)) return false;
+        return blockSet.has(k);
+    }
+
+    const faceData = [
+        { dir:[1,0,0],  verts:[[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5],[.5,-.5,.5]] },
+        { dir:[-1,0,0], verts:[[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5],[-.5,-.5,-.5]] },
+        { dir:[0,1,0],  verts:[[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5],[-.5,.5,-.5]] },
+        { dir:[0,-1,0], verts:[[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,.5]] },
+        { dir:[0,0,1],  verts:[[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5],[-.5,-.5,.5]] },
+        { dir:[0,0,-1], verts:[[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5],[.5,-.5,-.5]] },
+    ];
+
+    // Agrupar bloques por tipo de material
+    const blocksByMat = {};
+    for (const block of blocks) {
+        if (!blocksByMat[block.matType]) blocksByMat[block.matType] = [];
+        blocksByMat[block.matType].push(block);
+    }
+
+    const meshes = [];
+
+    for (const [matType, typeBlocks] of Object.entries(blocksByMat)) {
+        const mat = materialPorNombre[matType];
+        if (!mat) continue;
+
+        const pos = [], uvs = [];
+        const faceIdxs = [[], [], [], [], [], []];
+        let vi = 0;
+
+        for (const { x, y, z } of typeBlocks) {
+            faceData.forEach(({ dir: [dx,dy,dz], verts }, fi) => {
+                if (isSolid(x+dx, y+dy, z+dz)) return;
+                verts.forEach(([vx,vy,vz]) => { pos.push(x+vx, y+vy, z+vz); });
+                uvs.push(0,0, 0,1, 1,1, 1,0);
+                faceIdxs[fi].push(vi, vi+1, vi+2, vi, vi+2, vi+3);
+                vi += 4;
+            });
+        }
+
+        if (pos.length === 0) continue;
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+
+        const allIdxs = [];
+        let offset = 0;
+        for (let fi = 0; fi < 6; fi++) {
+            const count = faceIdxs[fi].length;
+            if (count > 0) {
+                geo.addGroup(offset, count, fi);
+                allIdxs.push(...faceIdxs[fi]);
+                offset += count;
+            }
+        }
+        geo.setIndex(allIdxs);
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.frustumCulled = false;
+        mesh.userData.isChunk = true;
+        mesh.name = "chunk_mesh";
+        scene.add(mesh);
+        meshes.push(mesh);
+    }
+
+    const allBlockSet = new Set(blocks.map(b => `${b.x},${b.y},${b.z}`));
+    activeChunks.set(key, { meshes, allBlocks: blocks, allBlockSet, posToInstance: new Map() });
+}
+    
+
+
+function descargarChunk(key) {
+    const chunk = activeChunks.get(key);
+    if (!chunk) return;
+    chunk.meshes?.forEach(m => { scene.remove(m); m.geometry.dispose(); });
+    activeChunks.delete(key);
+}
+
+function aplicarRotosEnChunk(cx, cz) {
+    // isSolid() ya excluye bloques rotos al construir la geometría
+}
+
+function romperBloqueChunk(hit, targetMesh) {
+    const n = hit.face.normal;
+    const bx = Math.round(hit.point.x - n.x * 0.5);
+    const by = Math.round(hit.point.y - n.y * 0.5);
+    const bz = Math.round(hit.point.z - n.z * 0.5);
+    const key = `${Math.round(bx)},${Math.round(by)},${Math.round(bz)}`;
+    
+    if (brokenTerrain.has(key)) return;
+    brokenTerrain.add(key);
+    
+    const cx = Math.floor(bx / CHUNK_SIZE);
+    const cz = Math.floor(bz / CHUNK_SIZE);
+    const ck = chunkKey(cx, cz);
+    
+        if (activeChunks.has(ck)) {
+        const viejasMeshes = activeChunks.get(ck).meshes || [];
+        cargarChunk(cx, cz, tipoMundoChunks, true);
+        viejasMeshes.forEach(m => { scene.remove(m); m.geometry.dispose(); });
+    }
+
+
+    
+    if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({
+            type: 'block_break',
+            x: bx, y: by, z: bz,
+            mundo: tipoMundoActual,
+            salaId: salaIdActual
+        }));
+    }
+
+    // Regenerar agua desde fuentes vecinas
+    setTimeout(() => {
+        [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => {
+            const vx = bx+dx, vy = by+dy, vz = bz+dz;
+            if (esAgua(vx,vy,vz)) {
+                const vn = waterNiveles.get(waterKey(vx,vy,vz)) ?? 8;
+                fluirAgua(vx,vy,vz,vn);
+            }
+        });
+    }, 100);
+}
+
+
+        function getChunkMeshes() {
+    const meshes = [];
+    activeChunks.forEach(c => { if (c.meshes) meshes.push(...c.meshes); });
+    return meshes;
+}
+
+        let chunkQueue = [];
+let chunkGenerating = false;
+let chunksTotalesInicio = 0;
+let chunksCargadosInicio = 0;
+let cargandoMundo = false;
+let chunksTerminados = false;
+let posicionAplicada = false;
+
+function verificarOcultarCarga() {
+    if (!chunksTerminados || !posicionAplicada) return;
+    setTimeout(() => { document.getElementById('pantalla-carga').style.display = 'none'; }, 400);
+}
+
+function procesarColaChunks() {
+    if (chunkQueue.length === 0) {
+        chunkGenerating = false;
+        if (cargandoMundo) {
+            cargandoMundo = false;
+            chunksTerminados = true;
+            const barraProgreso = document.getElementById('barra-progreso-inner');
+            barraProgreso.style.transition = 'none';
+            barraProgreso.style.width = '100%';
+            verificarOcultarCarga();
+        }
+        return;
+    }
+    chunkGenerating = true;
+    const { cx, cz, tipo } = chunkQueue.shift();
+    const key = chunkKey(cx, cz);
+    if (!activeChunks.has(key)) {
+        cargarChunk(cx, cz, tipo);
+    }
+    if (cargandoMundo && chunksTotalesInicio > 0) {
+        chunksCargadosInicio++;
+        const pct = Math.min(99, Math.round((chunksCargadosInicio / chunksTotalesInicio) * 100));
+        const barraProgreso = document.getElementById('barra-progreso-inner');
+        barraProgreso.style.transition = 'width 0.1s steps(4)';
+        barraProgreso.style.width = pct + '%';
+    }
+    setTimeout(procesarColaChunks, 0);
+}
+
+function actualizarChunks() {
+    const pcx = Math.floor(camera.position.x / CHUNK_SIZE);
+    const pcz = Math.floor(camera.position.z / CHUNK_SIZE);
+
+    // Ordenar chunks por distancia al jugador (los más cercanos primero)
+    const pendientes = [];
+    for (let dx = -RENDER_DISTANCE_CHUNKS; dx <= RENDER_DISTANCE_CHUNKS; dx++) {
+        for (let dz = -RENDER_DISTANCE_CHUNKS; dz <= RENDER_DISTANCE_CHUNKS; dz++) {
+            const cx = pcx + dx, cz = pcz + dz;
+            if (!activeChunks.has(chunkKey(cx, cz))) {
+                pendientes.push({ cx, cz, tipo: tipoMundoChunks, dist: dx*dx + dz*dz });
+            }
+        }
+    }
+    pendientes.sort((a, b) => a.dist - b.dist);
+    chunkQueue.push(...pendientes);
+
+    // Descargar chunks lejanos
+    for (const key of activeChunks.keys()) {
+        const [cx, cz] = key.split(',').map(Number);
+        if (Math.abs(cx - pcx) > RENDER_DISTANCE_CHUNKS + 1 || Math.abs(cz - pcz) > RENDER_DISTANCE_CHUNKS + 1) {
+            descargarChunk(key);
+        }
+    }
+
+    if (!chunkGenerating) procesarColaChunks();
+}
+
+        function generarMapa(tipo) {
+    tipoMundoChunks = tipo;
+    for (const key of activeChunks.keys()) descargarChunk(key);
+    actualizarChunks();
+    if (!modoMultijugador) return; // solitario lo maneja cargarMundo
+}
+
+    
+
+                // Función que llama el botón del menú (REGLA DE ORO: Evita caída al vacío)
+        
+window.iniciarMundo = function(tipo, esMulti) {
+    // Mostrar pantalla de carga
+    const tips = [
+        "Los creepers temen a los ocelotes.",
+        "Puedes cultivar árboles en cualquier bioma.",
+        "El cristal de End resiste explosiones.",
+        "Duerme para evitar que aparezcan mobs.",
+        "La lana amortigua las caídas.",
+        "Los bloques de oro atraen a los cerdos zombie.",
+        "Puedes hacer una cama con 3 tablones y 3 lanas.",
+        "El agua apaga el fuego.",
+        "Las flechas de fuego encienden la TNT.",
+        "Los esqueletos tienen miedo del sol."
+    ];
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+    const pantallaCarga = document.getElementById('pantalla-carga');
+    const barraProgreso = document.getElementById('barra-progreso-inner');
+    const tipTexto = document.getElementById('carga-tip');
+    tipTexto.textContent = tip;
+    pantallaCarga.style.display = 'flex';
+    barraProgreso.style.width = '0%';
+    barraProgreso.style.transition = 'width 0.1s steps(6)';
+    barraProgreso.style.width = '0%';
+    const totalD = (RENDER_DISTANCE_CHUNKS * 2 + 1) ** 2;
+    chunksTotalesInicio = totalD;
+    chunksCargadosInicio = 0;
+    cargandoMundo = true;
+    chunksTerminados = false;
+    posicionAplicada = false;
+
+    // Cerrar cualquier conexión anterior
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+    playerId = null;
+    
+    tipoMundoActual = tipo;
+    modoMultijugador = !!esMulti;
+    esPropietario = !esMulti;
+
+    // LIMPIAR COMPLETAMENTE EL MUNDO ANTERIOR
+    remotePlayers.forEach((j) => scene.remove(j.mesh));
+    remotePlayers.clear();
+
+    for (const key of activeChunks.keys()) descargarChunk(key);
+manualBlocks.forEach(b => scene.remove(b));
+manualBlocks.length = 0;
+brokenInstances.clear();
+brokenTerrain.clear();
+sandBlocks.length = 0;
+waterMeshes.forEach(m => scene.remove(m));
+waterMeshes.clear();
+waterPositions.clear();
+waterNiveles.clear();
+waterSources.clear();
+
+    mundoIniciado = true;
+    volarActivo = false;
+    jumpPressed = false;
+    sneakPressed = false;
+    document.getElementById('pantalla-principal').classList.remove('activa');
+    document.getElementById('pantalla-jugar').classList.remove('activa');
+
+    // Semilla
+    if (modoMultijugador && salaIdActual) {
+        let semilla = 42;
+        const num = parseInt(salaIdActual.replace(/\D/g, ''));
+        if (!isNaN(num)) semilla = num;
+        noise = new SimplexNoise(semilla);
+    } else {
+        const semilla = (typeof mundoIdActual !== 'undefined' && mundoIdActual) ? parseInt(mundoIdActual) || 42 : 42;
+        noise = new SimplexNoise(semilla);
+    }
+    generarMapa(tipo);
+
+    // Si es modo solitario (entrar a un mundo propio)
+    if (!modoMultijugador && mundoIdActual) {
+        salaIdActual = "mundo_" + mundoIdActual;
+        socket = new WebSocket('wss://minecraft-server2-bnn6.onrender.com');
+        socket.onopen = () => {
+            socket.send(JSON.stringify({
+                type: 'register_world',
+                salaId: salaIdActual,
+                mundo: tipoMundoActual,
+                nombre: mundoNombreActual
+            }));
+        };
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'id') {
+                playerId = data.id;
+            } else if (data.type === 'player_join_request') {
+        if (!modoMultijugador) {
+            modoMultijugador = true;
+            esPropietario = true;
+            mostrarMensaje('¡Un jugador se ha unido a tu mundo!');
+                    socket.send(JSON.stringify({
+                        type: 'join',
+                        salaId: salaIdActual,
+                        mundo: tipoMundoActual,
+                        nombre: mundoNombreActual
+                    }));
+                    configurarSocketMultijugador();
+                }
+            } else if (data.type === 'players') {
+                actualizarJugadoresRemotos(data.players);
+            } else if (data.type === 'block_place' || data.type === 'block_break') {
+                aplicarEventoBloque(data);
+            }
+        };
+        socket.onerror = (err) => {};
+    } else if (modoMultijugador) {
+        conectarPartida();
+    }
+
+    // Cargar mundo guardado (solo en solitario)
+    if (!modoMultijugador) {
+        setTimeout(() => cargarMundo(), 300);
+    } else {
+        const posGuardada = localStorage.getItem('posicion_multi_' + salaIdActual);
+        if (posGuardada) {
+            setTimeout(() => {
+                const pos = JSON.parse(posGuardada);
+                camera.position.set(pos.x, pos.y, pos.z);
+                    yaw = pos.yaw || 0;
+                    pitch = pos.pitch || 0;
+                    camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+                    volarActivo = pos.volar || false;
+                    sneakActivo = pos.sneak || false;
+                    sneakBtn.classList.toggle('activo', sneakActivo);
+            }, 400);
+        }
+    }
+
+    const spawnX = 0;
+const spawnZ = 0;
+velocityY = 0;
+isJumping = false;
+
+const mundoKey = 'minecraft_mundo_' + tipo + '_' + (mundoIdActual || 'default');
+const tieneMundoGuardado = !modoMultijugador && !!localStorage.getItem(mundoKey);
+
+if (tieneMundoGuardado) {
+    // Leer posición guardada de inmediato para no caer desde Y=999
+    try {
+        const savedData = JSON.parse(localStorage.getItem(mundoKey));
+        if (savedData && savedData.posicion) {
+            const pos = savedData.posicion;
+            camera.position.set(pos.x, pos.y, pos.z);
+            yaw = pos.yaw || 0;
+            pitch = pos.pitch || 0;
+            camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+            volarActivo = pos.volar || false;
+        } else {
+            camera.position.set(spawnX, 999, spawnZ);
+        }
+    } catch(e) {
+        camera.position.set(spawnX, 999, spawnZ);
+    }
+} else {
+    camera.position.set(spawnX, 999, spawnZ);
+    function esperarSpawn() {
+        const spawnCX = Math.floor(spawnX / CHUNK_SIZE);
+        const spawnCZ = Math.floor(spawnZ / CHUNK_SIZE);
+        const ck = chunkKey(spawnCX, spawnCZ);
+        const chunk = activeChunks.get(ck);
+        const listo = chunk && chunk.meshes && chunk.meshes.length > 0 && scene.children.includes(chunk.meshes[0]);
+        if (!listo) { setTimeout(esperarSpawn, 50); return; }
+        const h = getAltura(spawnX, spawnZ, tipo);
+        const spawnY = (tipo === 'plano' ? 0 : h) + 2 + 1.62;
+        camera.position.set(spawnX, spawnY, spawnZ);
+        velocityY = 0;
+        isJumping = false;
+        posicionAplicada = true;
+        verificarOcultarCarga();
+    }
+    setTimeout(esperarSpawn, 300);
+}
+};
+
+
+
+
+        // Lista para bloques puestos manualmente (para que sigan siendo editables)
+        const manualBlocks = [];
+const brokenInstances = new Map();
+const brokenTerrain = new Set(); // Guarda posiciones "x,y,z" de terreno roto
+
+// Tipos de material por nombre para guardar/cargar
+const nombreMaterial = new Map([
+    [materials,      'grass'],
+    [stoneMaterial,  'stone'],
+    [woodMaterial,   'wood'],
+    [dirtMaterial,   'dirt'],
+    [glassMaterial,  'glass'],
+    [sandMaterial,   'sand'],
+    [ironMaterial,   'iron'],
+    [brickMaterial,  'brick'],
+    [waterMaterial,  'water'],
+    [oakLogMaterial,    'oaklog'],
+[oakLeavesMaterial, 'oak_leaves'],
+    [matCRed,        'c_red'],
+    [matCBlack,      'c_black'],
+    [matCLGray,      'c_lgray'],
+    [matCYellow,     'c_yellow'],
+    [matCLBlue,      'c_lblue'],
+    [matCOrange,     'c_orange'],
+    [matCMagenta,    'c_magenta'],
+    [matCLime,       'c_lime'],
+    [matCBrown,      'c_brown'],
+]);
+const materialPorNombre = {
+    'grass':    materials,
+    'stone':    stoneMaterial,
+    'wood':     woodMaterial,
+    'dirt':     dirtMaterial,
+    'glass':    glassMaterial,
+    'sand':     sandMaterial,
+    'iron':     ironMaterial,
+    'brick':    brickMaterial,
+    'water':       waterMaterial,
+    'oaklog':      oakLogMaterial,
+'oak_leaves':  oakLeavesMaterial,
+    'c_red':     matCRed,
+    'c_black':   matCBlack,
+    'c_lgray':   matCLGray,
+    'c_yellow':  matCYellow,
+    'c_lblue':   matCLBlue,
+    'c_orange':  matCOrange,
+    'c_magenta': matCMagenta,
+    'c_lime':    matCLime,
+    'c_brown':   matCBrown,
+    'bucket_empty': null,
+};
+const sandBlocks = [];
+
+// ===== SISTEMA DE AGUA =====
+const waterPositions = new Set(); // "x,y,z"
+const waterSources = new Set(); // solo fuentes colocadas por el jugador
+const waterNiveles = new Map();   // "x,y,z" -> nivel (0=fuente, 1-7=flujo)
+const waterMeshes = new Map();    // "x,y,z" -> THREE.Mesh
+const waterFlujo = new Map();     // "x,y,z" -> {dx, dz} dirección del flujo
+let waterGeneracion = 0;          // Cancela timeouts viejos al incrementarse
+
+function waterKey(x, y, z) { return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`; }
+
+function esAgua(x, y, z) { return waterPositions.has(waterKey(x, y, z)); }
+
+function esSolido(x, y, z) {
+    const k = waterKey(x, y, z);
+    if (waterPositions.has(k)) return false;
+    if (manualBlocks.some(b =>
+        Math.round(b.position.x) === Math.round(x) &&
+        Math.round(b.position.y) === Math.round(y) &&
+        Math.round(b.position.z) === Math.round(z)
+    )) return true;
+    if (brokenTerrain.has(k)) return false;
+    const cx = Math.floor(Math.round(x) / CHUNK_SIZE);
+    const cz = Math.floor(Math.round(z) / CHUNK_SIZE);
+    const chunk = activeChunks.get(chunkKey(cx, cz));
+    return !!(chunk && chunk.allBlockSet && chunk.allBlockSet.has(k));
+}
+
+function reconstruirBloqueAgua(x, y, z) {
+    const k = waterKey(x, y, z);
+    // Quitar mesh anterior si existe
+    if (waterMeshes.has(k)) {
+        const viejo = waterMeshes.get(k);
+        scene.remove(viejo);
+        viejo.geometry.dispose();
+        waterMeshes.delete(k);
+    }
+    if (!waterPositions.has(k)) return;
+
+    // Caras: +X, -X, +Y, -Y, +Z, -Z
+    const dirs = [
+        [1,0,0], [-1,0,0],
+        [0,1,0], [0,-1,0],
+        [0,0,1], [0,0,-1]
+    ];
+
+    // Construir geometría solo con caras expuestas (no adyacentes a otra agua)
+    const posArr = [], normArr = [], uvArr = [], idxArr = [];
+    let vi = 0;
+
+        // Vértices de cada cara — topY varía según el nivel de flujo
+    const nivel = waterNiveles.get(k) ?? 0;
+const topY = 0.5 - (nivel / 8);
+
+// Altura de las 4 esquinas según vecinos (estilo Bedrock: superficie continua)
+function cornerHeight(cx, cy, cz) {
+    let minNivel = nivel;
+    const vecinos = [[cx,cy,cz],[cx-1,cy,cz],[cx,cy,cz-1],[cx-1,cy,cz-1]];
+    for (const [vx,vy,vz] of vecinos) {
+        const vk = waterKey(vx,vy,vz);
+        if (waterPositions.has(vk)) {
+            const vn = waterNiveles.get(vk) ?? 0;
+            if (vn < minNivel) minNivel = vn;
+        }
+    }
+    return 0.5 - (minNivel / 8);
+}
+
+// Las 4 esquinas de la cara superior (xz: -+, --, +-, ++)
+
+
+// Buscar si hay agua fuente (nivel 0) en los 4 vecinos o arriba → superficie llena
+const tieneAguaEncima = esAgua(x, y+1, z);
+const nivelMinVecino = Math.min(
+    waterNiveles.get(waterKey(x+1,y,z)) ?? 8,
+    waterNiveles.get(waterKey(x-1,y,z)) ?? 8,
+    waterNiveles.get(waterKey(x,y,z+1)) ?? 8,
+    waterNiveles.get(waterKey(x,y,z-1)) ?? 8
+);
+// Si hay agua encima o vecino de menor nivel → superficie al tope
+const topYBase = (tieneAguaEncima || nivelMinVecino < nivel) ? 0.5 : topY;
+
+function cornerHeightFinal(cx, cz) {
+    // Esquina compartida por 4 bloques: (cx-1,cz-1),(cx,cz-1),(cx-1,cz),(cx,cz)
+    let best = nivel;
+    for (const [vx,vz] of [[cx,cz],[cx-1,cz],[cx,cz-1],[cx-1,cz-1]]) {
+        const vk = waterKey(vx,y,vz);
+        if (waterPositions.has(vk)) {
+            const vn = waterNiveles.get(vk) ?? 0;
+            // Agua encima de ese vecino → esquina llena
+            if (esAgua(vx,y+1,vz)) return 0.5;
+            if (vn < best) best = vn;
+        }
+    }
+    return 0.5 - (best / 8);
+}
+
+const h00 = cornerHeightFinal(x,   z  );
+const h10 = cornerHeightFinal(x+1, z  );
+const h01 = cornerHeightFinal(x,   z+1);
+const h11 = cornerHeightFinal(x+1, z+1);
+
+const caraVerts = [
+    // +X
+    [[0.5,-.5,-.5],[0.5,h10,-.5],[0.5,h11,0.5],[0.5,-.5,0.5]],
+    // -X
+    [[-.5,-.5,0.5],[-.5,h01,0.5],[-.5,h00,-.5],[-.5,-.5,-.5]],
+    // +Y
+    [[-.5,h01,0.5],[0.5,h11,0.5],[0.5,h10,-.5],[-.5,h00,-.5]],
+    // -Y
+    [[-.5,-.5,-.5],[0.5,-.5,-.5],[0.5,-.5,0.5],[-.5,-.5,0.5]],
+    // +Z
+    [[0.5,-.5,0.5],[0.5,h11,0.5],[-.5,h01,0.5],[-.5,-.5,0.5]],
+    // -Z
+    [[-.5,-.5,-.5],[-.5,h00,-.5],[0.5,h10,-.5],[0.5,-.5,-.5]],
+];
+    const caraNorms = [
+        [1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]
+    ];
+    // Dirección del flujo → rotación de UVs en la cara superior
+    const flujo = waterFlujo.get(k) || { dx: 0, dz: 0 };
+    // Rotar UVs de +Y según dirección: dx=1→derecha, dx=-1→izquierda, dz=1→abajo, dz=-1→arriba
+    let uvTop;
+    if (flujo.dx === 1)       uvTop = [[0,0],[1,0],[1,1],[0,1]]; // fluye +X
+    else if (flujo.dx === -1) uvTop = [[1,1],[0,1],[0,0],[1,0]]; // fluye -X
+    else if (flujo.dz === 1)  uvTop = [[1,0],[1,1],[0,1],[0,0]]; // fluye +Z
+    else if (flujo.dz === -1) uvTop = [[0,1],[0,0],[1,0],[1,1]]; // fluye -Z
+    else                      uvTop = [[0,0],[1,0],[1,1],[0,1]]; // fuente, sin flujo
+
+    const caraUVs = [
+        [[0,0],[0,1],[1,1],[1,0]], // +X
+        [[1,0],[1,1],[0,1],[0,0]], // -X
+        uvTop,                     // +Y superficie con dirección
+        [[0,0],[1,0],[1,1],[0,1]], // -Y
+        [[1,0],[1,1],[0,1],[0,0]], // +Z
+        [[0,0],[0,1],[1,1],[1,0]], // -Z
+    ];
+
+    const faceGroups = [];
+    let idxCount = 0;
+    dirs.forEach(([dx,dy,dz], i) => {
+        const nx = x+dx, ny = y+dy, nz = z+dz;
+        if (esAgua(nx,ny,nz)) return;
+        if (esSolido(nx,ny,nz)) return;
+
+        const verts = caraVerts[i];
+        const norm = caraNorms[i];
+        const faceUVs = caraUVs[i];
+        verts.forEach(([vx,vy,vz], vi2) => {
+            posArr.push(x+vx, y+vy, z+vz);
+            normArr.push(...norm);
+            uvArr.push(faceUVs[vi2][0], faceUVs[vi2][1]);
+        });
+        idxArr.push(vi, vi+1, vi+2, vi, vi+2, vi+3);
+        faceGroups.push({ start: idxCount, matIdx: i });
+        idxCount += 6;
+        vi += 4;
+    });
+
+    if (idxArr.length === 0) return;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
+    geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normArr, 3));
+    geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvArr, 2));
+    geo.setIndex(idxArr);
+    faceGroups.forEach(({ start, matIdx }, idx) => {
+        const count = idx < faceGroups.length - 1 ? faceGroups[idx+1].start - start : idxArr.length - start;
+        geo.addGroup(start, count, matIdx);
+    });
+
+    const mesh = new THREE.Mesh(geo, waterMaterial);
+    mesh.position.set(0,0,0);
+    mesh.userData.isWater = true;
+    scene.add(mesh);
+    waterMeshes.set(k, mesh);
+}
+
+function contarFuentesVecinas(x, y, z) {
+    let count = 0;
+    [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,dz]) => {
+        const k = waterKey(x+dx, y, z+dz);
+        if (waterPositions.has(k) && (waterNiveles.get(k) ?? 8) === 0) count++;
+    });
+    return count;
+}
+
+function agregarAgua(x, y, z, fluir = true, nivel = 0, dxFlujo = 0, dzFlujo = 0) {
+    const k = waterKey(x, y, z);
+    // Si ya hay agua con un nivel igual o mejor, no hacemos nada
+    if (waterPositions.has(k) && (waterNiveles.get(k) ?? 8) <= nivel) return;
+
+
+    // Fuente infinita: si tiene 2 o más fuentes vecinas al mismo nivel, se convierte en fuente
+    if (nivel > 0 && contarFuentesVecinas(x, y, z) >= 2) {
+        nivel = 0;
+        dxFlujo = 0;
+        dzFlujo = 0;
+    }
+
+    waterPositions.add(k);
+    waterNiveles.set(k, nivel);
+    waterFlujo.set(k, { dx: dxFlujo, dz: dzFlujo });
+
+    reconstruirBloqueAgua(x, y, z);
+[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => {
+    if (esAgua(x+dx, y+dy, z+dz)) {
+        reconstruirBloqueAgua(x+dx, y+dy, z+dz);
+        // Reconstruir también los vecinos del vecino en el mismo plano Y
+        [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx2,_,dz2]) => {
+            if (esAgua(x+dx+dx2, y+dy, z+dz+dz2)) reconstruirBloqueAgua(x+dx+dx2, y+dy, z+dz+dz2);
+        });
+    }
+});
+if (fluir) fluirAgua(x, y, z, nivel);
+}
+
+function buscarCaidaCercana(startX, startY, startZ) {
+    let mejorDist = 6;
+    let objetivos = [];
+    for (let dx = -5; dx <= 5; dx++) {
+        for (let dz = -5; dz <= 5; dz++) {
+            const dist = Math.abs(dx) + Math.abs(dz);
+            if (dist > 5) continue;
+            const nx = startX + dx, nz = startZ + dz;
+            if (!esSolido(nx, startY, nz) && !esSolido(nx, startY - 1, nz) && !esAgua(nx, startY - 1, nz)) {
+                if (dist < mejorDist) { mejorDist = dist; objetivos = [[dx, dz]]; }
+                else if (dist === mejorDist) { objetivos.push([dx, dz]); }
+            }
+        }
+    }
+    return objetivos;
+}
+
+function fluirAgua(x, y, z, nivel = 0) {
+    const genActual = waterGeneracion;
+    const yAbajo = y - 1;
+    if (yAbajo < -64) return;
+
+    if (!esSolido(x, yAbajo, z)) {
+        setTimeout(() => {
+            if (waterGeneracion !== genActual) return;
+            agregarAgua(x, yAbajo, z, true, 1, 0, 0); // En caída nivel es 1 para Bedrock
+            if (socket?.readyState === 1) socket.send(JSON.stringify({ type: 'block_place', x, y: yAbajo, z, mat: 'water', nivel: 1, mundo: tipoMundoActual, salaId: salaIdActual }));
+        }, 250);
+        return;
+    }
+
+    if (nivel >= 7) return;
+    const delay = 300 + nivel * 60;
+    const caidas = buscarCaidaCercana(x, y, z);
+    [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx, dy, dz]) => {
+        const nx = x + dx, nz = z + dz;
+        if (esSolido(nx, y, nz)) return;
+
+        let fluirAqui = caidas.length === 0;
+        if (caidas.length > 0) {
+            fluirAqui = caidas.some(([cx, cz]) => {
+                if (dx !== 0) return Math.sign(cx) === dx;
+                if (dz !== 0) return Math.sign(cz) === dz;
+                return false;
+            });
+        }
+
+        if (fluirAqui) {
+            const k = waterKey(nx, y, nz);
+            const nivelExistente = waterNiveles.get(k) ?? 8;
+            if (!esSolido(nx, y, nz) && nivelExistente > nivel + 1) {
+                setTimeout(() => {
+                    if (waterGeneracion !== genActual) return;
+                    agregarAgua(nx, y, nz, true, nivel + 1, dx, dz);
+                    if (socket?.readyState === 1) socket.send(JSON.stringify({ type: 'block_place', x: nx, y, z: nz, mat: 'water', nivel: nivel + 1, mundo: tipoMundoActual, salaId: salaIdActual }));
+                }, delay);
+            }
+        }
+    });
+}
+
+function quitarAgua(x, y, z) {
+    const k = waterKey(x, y, z);
+    if (!waterPositions.has(k)) return;
+
+    waterGeneracion++;
+    const genActual = waterGeneracion;
+
+                // 1. Identificar TODA el agua que sigue teniendo una fuente válida (Escudo de protección)
+    const seguros = new Set();
+    const colaSeguros = [];
+    for (const sk of waterSources) { if (sk !== k) colaSeguros.push(sk); }
+for (const sk of waterPositions) {
+    if (sk !== k && (waterNiveles.get(sk) ?? 8) === 0) colaSeguros.push(sk);
+}
+for (const sk of waterPositions) {
+    if (sk !== k && (waterNiveles.get(sk) ?? 8) === 0 && !colaSeguros.includes(sk)) {
+        colaSeguros.push(sk);
+    }
+}
+    while (colaSeguros.length > 0) {
+    const ck = colaSeguros.shift();
+    if (seguros.has(ck)) continue;
+    seguros.add(ck);
+    const [cx, cy, cz] = ck.split(',').map(Number);
+    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => {
+        const vk = waterKey(cx+dx, cy+dy, cz+dz);
+        if (waterPositions.has(vk) && !seguros.has(vk) && vk !== k) colaSeguros.push(vk);
+    });
+}
+
+    // 2. Identificar el agua que se quedó "huérfana"
+    const conectados = new Set();
+
+    const cola = [k];
+    while (cola.length > 0) {
+        const ck = cola.shift();
+        if (conectados.has(ck) || !waterPositions.has(ck) || seguros.has(ck)) continue;
+        conectados.add(ck);
+        const [cx, cy, cz] = ck.split(',').map(Number);
+        [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => {
+            const vk = waterKey(cx+dx, cy+dy, cz+dz);
+            if (waterPositions.has(vk) && !conectados.has(vk) && !seguros.has(vk)) cola.push(vk);
+        });
+    }
+
+    // 3. Eliminar la fuente inicial y actualizar visuales
+    waterPositions.delete(k);
+    waterNiveles.delete(k);
+    waterFlujo.delete(k);
+    waterSources.delete(k);
+    reconstruirBloqueAgua(x, y, z);
+    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => reconstruirBloqueAgua(x+dx, y+dy, z+dz));
+
+    const procesarSecado = () => {
+        if (waterGeneracion !== genActual) return;
+        const bloquesParaSecar = Array.from(conectados).filter(bk => waterPositions.has(bk) && !seguros.has(bk));
+        if (bloquesParaSecar.length === 0) return;
+        const hayProfundos = bloquesParaSecar.some(bk => (waterNiveles.get(bk) ?? 0) < 7);
+
+        bloquesParaSecar.forEach(bk => {
+            const nv = waterNiveles.get(bk) ?? 8;
+            const [bx, by, bz] = bk.split(',').map(Number);
+            if (Math.random() < 0.7) {
+                if (nv >= 7) {
+                    if (!hayProfundos) {
+                        waterPositions.delete(bk);
+                        waterNiveles.delete(bk);
+                        waterFlujo.delete(bk);
+                        reconstruirBloqueAgua(bx, by, bz);
+                        [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => reconstruirBloqueAgua(bx+dx, by+dy, bz+dz));
+                    }
+                } else {
+                    let puedeSecarse = true;
+                    [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,,dz]) => {
+                        const vk = waterKey(bx+dx, by, bz+dz);
+                        if (waterPositions.has(vk) && conectados.has(vk) && !seguros.has(vk)) {
+                            if ((waterNiveles.get(vk) ?? 0) < nv) puedeSecarse = false;
+                        }
+                    });
+                    if (puedeSecarse) {
+                        waterNiveles.set(bk, nv + 1);
+                        reconstruirBloqueAgua(bx, by, bz);
+                        [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1]].forEach(([dx,,dz]) => {
+                            if (esAgua(bx+dx, by, bz+dz)) reconstruirBloqueAgua(bx+dx, by, bz+dz);
+                        });
+                    }
+                }
+            }
+        });
+        if (bloquesParaSecar.some(bk => waterPositions.has(bk))) setTimeout(procesarSecado, 70);
+    };
+    setTimeout(procesarSecado, 20);
+
+
+    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1],[1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1]].forEach(([dx,dy,dz]) => {
+        if (esAgua(x+dx, y+dy, z+dz)) reconstruirBloqueAgua(x+dx, y+dy, z+dz);
+    });
+}
+
+
+
+
+
+
+    
+
+function guardarMundo() {
+    if (typeof invSlots !== 'undefined') {
+        const invData = {};
+        Object.keys(invSlots).forEach(k => {
+            invData[k] = { mat: invSlots[k].mat };
+        });
+        localStorage.setItem('invSlots_' + tipoMundoActual, JSON.stringify(invData));
+    }
+    if (!esPropietario) {
+        // Solo guardar posición si eres visitante
+        localStorage.setItem('posicion_multi_' + salaIdActual, JSON.stringify({
+            x: camera.position.x,
+            y: camera.position.y,
+            z: camera.position.z,
+            yaw, pitch, volar: volarActivo
+        }));
+        return;
+    }
+    const rotosData = Array.from(brokenTerrain).map(k => {
+        const [x, y, z] = k.split(',').map(Number);
+        return { x, y, z };
+    });
+        const aguaData = Array.from(waterPositions).map(k => {
+        const [x, y, z] = k.split(',').map(Number);
+        return { x, y, z, mat: 'water', rx: 0, ry: 0, rz: 0, nivel: waterNiveles.get(k) ?? 0 };
+    });
+    const manualesData = [
+        ...manualBlocks.map(b => ({
+            x: b.position.x,
+            y: b.position.y,
+            z: b.position.z,
+            mat: b.userData.matType || nombreMaterial.get(b.material) || nombreMaterial.get(b.material?.[0]) || 'grass',
+            rx: b.rotation.x,
+            ry: b.rotation.y,
+            rz: b.rotation.z
+        })),
+        ...aguaData
+    ];
+    if (!mundoIdActual) return;
+    const mundoKey = 'minecraft_mundo_' + tipoMundoActual + '_' + mundoIdActual;
+    localStorage.setItem(mundoKey, JSON.stringify({
+        rotos: rotosData,
+        manuales: manualesData,
+        posicion: {
+            x: camera.position.x,
+            y: camera.position.y,
+            z: camera.position.z,
+            yaw: yaw,
+            pitch: pitch,
+            volar: volarActivo,
+            sneak: sneakActivo
+        }
+    }));
+}
+
+function cargarMundo() {
+    if (modoMultijugador) return;
+    const mundoKey = 'minecraft_mundo_' + tipoMundoActual + '_' + (mundoIdActual || 'default');
+    const rawData = localStorage.getItem(mundoKey);
+    if (!rawData) {
+        return;
+    }
+    const data = JSON.parse(rawData);
+    const { rotos, manuales, posicion } = data;
+
+    manualBlocks.forEach(b => scene.remove(b));
+    manualBlocks.length = 0;
+    brokenInstances.clear();
+
+    if (rotos && rotos.length > 0) {
+        brokenTerrain.clear();
+        rotos.forEach(({ x, y, z }) => brokenTerrain.add(`${x},${y},${z}`));
+        for (const key of [...activeChunks.keys()]) {
+            const [cx, cz] = key.split(',').map(Number);
+            const viejasMeshes = activeChunks.get(key)?.meshes || [];
+            cargarChunk(cx, cz, tipoMundoChunks, true);
+            viejasMeshes.forEach(m => { scene.remove(m); m.geometry.dispose(); });
+        }
+    }
+
+    if (manuales) {
+                manuales.forEach(({ x, y, z, mat, rx, ry, rz, nivel }) => {
+            if (mat === 'water') { 
+                if ((nivel ?? 0) === 0) waterSources.add(waterKey(x, y, z));
+                agregarAgua(x, y, z, false, nivel ?? 0); 
+                return; 
+            }
+            const b = crearMeshManual(mat);
+            b.position.set(x, y, z);
+            if (rx) b.rotation.x = rx;
+            if (ry) b.rotation.y = ry;
+            if (rz) b.rotation.z = rz;
+            scene.add(b);
+            manualBlocks.push(b);
+            if (mat === 'sand') {
+                b.userData.isSand = true;
+                b.userData.falling = true;
+                sandBlocks.push(b);
+            }
+        });
+    }
+
+    if (posicion) {
+        camera.position.set(posicion.x, posicion.y, posicion.z);
+        yaw = posicion.yaw || 0;
+        pitch = posicion.pitch || 0;
+        camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+        velocityY = 0;
+        isJumping = false;
+        const _sx = posicion.x, _sy = posicion.y, _sz = posicion.z;
+        const _volar = posicion.volar || false;
+        sneakActivo = posicion.sneak || false;
+        sneakBtn.classList.toggle('activo', sneakActivo);
+        volarActivo = true; // Evitar gravedad mientras espera el chunk
+        function esperarChunkGuardado() {
+            camera.position.set(_sx, _sy, _sz);
+            velocityY = 0;
+            const cx = Math.floor(_sx / CHUNK_SIZE);
+            const cz = Math.floor(_sz / CHUNK_SIZE);
+            const chunk = activeChunks.get(chunkKey(cx, cz));
+            if (!chunk || !chunk.meshes || chunk.meshes.length === 0 || !scene.children.includes(chunk.meshes[0])) {
+                setTimeout(esperarChunkGuardado, 50);
+                return;
+            }
+            volarActivo = _volar; // Restaurar estado real de vuelo
+            posicionAplicada = true;
+            verificarOcultarCarga();
+        }
+        esperarChunkGuardado();
+    }
+
+    const pantallaCarga = document.getElementById('pantalla-carga');
+    // La pantalla de carga la cierra procesarColaChunks cuando terminen los chunks
+
+    // Sincronizar bloques con servidor para que amigos los vean
+    const _salaSync = salaIdActual;
+    const _mundoSync = tipoMundoActual;
+    setTimeout(() => {
+        if (modoMultijugador) return;
+        if (!socket || socket.readyState !== 1) return;
+        const d = JSON.parse(rawData);
+        if (d.manuales) {
+            d.manuales.forEach(b => {
+                socket.send(JSON.stringify({
+                    type: 'block_place',
+                    x: b.x, y: b.y, z: b.z,
+                    mat: b.mat,
+                    mundo: _mundoSync,
+                    salaId: _salaSync
+                }));
+            });
+        }
+    }, 2000);
+}
+
+// Autoguardado cada 10 segundos
+setInterval(() => {
+    if (!mundoIniciado) return;
+    if (esPropietario) {
+        guardarMundo();
+    } else if (salaIdActual) {
+        localStorage.setItem('posicion_multi_' + salaIdActual, JSON.stringify({
+            x: camera.position.x,
+            y: camera.position.y,
+            z: camera.position.z,
+            yaw, pitch, volar: volarActivo
+        }));
+    }
+}, 10000);
+
+// Guardar al salir
+window.addEventListener('beforeunload', () => {
+    if (!mundoIniciado) return;
+    if (esPropietario) {
+        guardarMundo();
+    } else if (salaIdActual) {
+        localStorage.setItem('posicion_multi_' + salaIdActual, JSON.stringify({
+            x: camera.position.x,
+            y: camera.position.y,
+            z: camera.position.z,
+            yaw, pitch, volar: volarActivo
+        }));
+    }
+});
+
+function mostrarMensaje(texto) {
+    const msg = document.createElement('div');
+    msg.textContent = texto;
+    msg.style.cssText = 'position:absolute;top:60px;right:10px;background:rgba(0,0,0,0.7);color:white;padding:8px 14px;border-radius:6px;font-family:sans-serif;font-size:14px;pointer-events:none;';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 2000);
+}
+
+
+
+        // --- EFECTO DE SELECCIÓN ---
+        const outline = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002, 1.002, 1.002)),
+            new THREE.LineBasicMaterial({ color: 0x000000 })
+        );
+        outline.visible = false;
+        outline.raycast = () => {};
+        scene.add(outline);
+
+
+
+        // 4. VARIABLES Y CONTROLES
+        // Calcular altura del spawn para que caiga sobre el terreno
+camera.position.set(0, 10, 5);
+                // Subimos de 0.08 a 0.15 para que camine casi el doble de rápido
+        const moveSpeed = 0.22, sprintSpeed = 0.32, sensitivity = 0.006;
+const PLAYER_HEIGHT = 1.8;
+const EYE_HEIGHT = 1.62;
+const HEAD_CLEARANCE = PLAYER_HEIGHT - EYE_HEIGHT; // 0.18
+
+        let moveX = 0, moveZ = 0, yaw = 0, pitch = 0;
+let currentSpeed = moveSpeed;
+let sprintActivo = false;
+        let selectedSlot = 0; // Slot activo por defecto
+        let lastTouchX = null, lastTouchY = null, lookTouchId = null, moveTouchId = null;
+        let velocityY = 0, isJumping = false;
+let volarActivo = false;
+let localPlacingFrames = 0;
+let lastJumpTap = 0;
+let lastSneakTap = 0;
+                                                                // Con -0.012 la gravedad es 10 veces más fuerte, eliminando el efecto de "vuelo"
+                                const gravity = -0.10, jumpForce = 0.45;
+
+
+
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.near = 0.1;
+        raycaster.far = 5;
+        const pointer = new THREE.Vector2(0, 0);
+
+        // Raycasters reutilizables para colisión (evita crear new cada frame)
+        const _rayCol1 = new THREE.Raycaster();
+        const _rayCol2 = new THREE.Raycaster();
+        const _rayCol3 = new THREE.Raycaster();
+        const _rayTecho = new THREE.Raycaster();
+        const _raySuelo2 = new THREE.Raycaster();
+
+        function actualizarPointer() {
+            const crosshair = document.getElementById('crosshair');
+            const rect = crosshair.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const canvas = renderer.domElement;
+            const cr = canvas.getBoundingClientRect();
+            pointer.x = ((cx - cr.left) / cr.width) * 2 - 1;
+            pointer.y = -((cy - cr.top) / cr.height) * 2 + 1;
+        }
+        // ===== MULTIJUGADOR (HOTSPOT) =====
+let socket = null;
+let playerId = null;
+let multiBarraIntervalo = null;
+let tipoMundoActual = 'plano';
+let salaIdActual = null;
+let mundoIdActual = null;
+let mundoNombreActual = 'Mi mundo';
+let modoMultijugador = false;
+let esPropietario = false;
+const remotePlayers = new Map();   // id -> { mesh }
+
+// ===== FUNCIONES MULTIJUGADOR =====
+function conectarPartida() {
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+    socket = new WebSocket('wss://minecraft-server2-bnn6.onrender.com');
+
+    socket.onopen = () => {
+        
+        if (salaIdActual && modoMultijugador) {
+            const skinGuardada = localStorage.getItem('skinSeleccionada') || 'kevin.png';
+            socket.send(JSON.stringify({
+                type: 'join',
+                salaId: salaIdActual,
+                mundo: tipoMundoActual,
+                nombre: mundoNombreActual,
+                skin: skinGuardada
+            }));
+        }
+        let progresoMulti = 0;
+        if (multiBarraIntervalo) clearInterval(multiBarraIntervalo);
+        multiBarraIntervalo = setInterval(() => {
+            progresoMulti += Math.random() * 6 + 2;
+            if (progresoMulti >= 90) { progresoMulti = 90; clearInterval(multiBarraIntervalo); }
+            const barraProgreso = document.getElementById('barra-progreso-inner');
+            barraProgreso.style.transition = 'width 0.15s steps(3)';
+            barraProgreso.style.width = progresoMulti + '%';
+        }, 150);
+    };
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'id') {
+            playerId = data.id;
+        }
+        else if (data.type === 'world_init') {
+            if (data.eventos) {
+                data.eventos.forEach(ev => aplicarEventoBloque(ev));
+            }
+            clearInterval(multiBarraIntervalo);
+            const barraProgreso = document.getElementById('barra-progreso-inner');
+            barraProgreso.style.transition = 'width 0.2s steps(4)';
+            barraProgreso.style.width = '100%';
+            setTimeout(() => { document.getElementById('pantalla-carga').style.display = 'none'; }, 400);
+        }
+        else if (data.type === 'players') {
+            actualizarJugadoresRemotos(data.players);
+        }
+        else if (data.type === 'block_place' || data.type === 'block_break') {
+            aplicarEventoBloque(data);
+        }
+        else if (data.type === 'joined') {
+            
+        }
+        else if (data.type === 'sala_cerrada') {
+            mostrarMensaje('La sala fue cerrada por el dueño');
+            mundoIniciado = false;
+            remotePlayers.forEach((j) => scene.remove(j.mesh));
+            remotePlayers.clear();
+            if (socket) socket.close();
+            const pantallaGuardado = document.getElementById('pantalla-guardado');
+    pantallaGuardado.style.display = 'flex';
+    setTimeout(() => {
+        pantallaGuardado.style.display = 'none';
+        document.getElementById('pantalla-principal').classList.add('activa');
+        renderizarMundos();
+    }, 1800);
+        }
+        else if (data.type === 'player_joined') {
+            // El servidor enviará la posición en el próximo 'players'
+        }
+        else if (data.type === 'player_left') {
+            const meshObj = remotePlayers.get(data.id);
+            if (meshObj) {
+                scene.remove(meshObj.mesh);
+                remotePlayers.delete(data.id);
+            }
+        }
+    };
+
+    socket.onerror = (err) => {
+        console.error('WebSocket error', err);
+        mostrarMensaje('Error de conexión al servidor');
+    };
+}
+
+function configurarSocketMultijugador() {
+    if (!socket) return;
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'id') {
+            playerId = data.id;
+        }
+        else if (data.type === 'world_init') {
+            if (data.eventos) {
+                data.eventos.forEach(ev => aplicarEventoBloque(ev));
+            }
+        }
+        else if (data.type === 'players') {
+            actualizarJugadoresRemotos(data.players);
+        }
+        else if (data.type === 'block_place' || data.type === 'block_break') {
+            aplicarEventoBloque(data);
+        }
+        else if (data.type === 'joined') {
+            
+            setTimeout(() => enviarEstadoJugador(), 100);
+            // Si el servidor no envía world_init, ocultar pantalla aquí como fallback
+            const pantallaCarga = document.getElementById('pantalla-carga');
+            if (pantallaCarga.style.display !== 'none') {
+                document.getElementById('barra-progreso-inner').style.transition = 'none';
+                document.getElementById('barra-progreso-inner').style.width = '100%';
+                setTimeout(() => { pantallaCarga.style.display = 'none'; }, 400);
+            }
+        }
+        else if (data.type === 'sala_cerrada') {
+            mostrarMensaje('La sala fue cerrada por el dueño');
+            mundoIniciado = false;
+            remotePlayers.forEach((j) => scene.remove(j.mesh));
+            remotePlayers.clear();
+            if (socket) socket.close();
+            document.getElementById('pantalla-principal').classList.add('activa');
+            renderizarMundos();
+        }
+        else if (data.type === 'player_joined') {
+            // El servidor enviará la posición en el próximo 'players'
+        }
+        else if (data.type === 'player_left') {
+            const meshObj = remotePlayers.get(data.id);
+            if (meshObj) {
+                scene.remove(meshObj.mesh);
+                remotePlayers.delete(data.id);
+            }
+        }
+    };
+}
+
+// Carga la textura de Steve una sola vez
+const texSteve = loader.load('steve.png');
+texSteve.magFilter = THREE.NearestFilter;
+texSteve.minFilter = THREE.NearestMipmapLinearFilter;
+texSteve.colorSpace = THREE.SRGBColorSpace;
+texSteve.generateMipmaps = true;
+// Cargar texturas de skins
+const texKevin = loader.load('kevin.png');
+const texKiore = loader.load('kiore.png');
+const texPalvox = loader.load('palvox.png');
+const texRainbow = loader.load('rainbow.png');
+const texSkinss = loader.load('skinss.png');
+
+[texKevin, texKiore, texPalvox, texRainbow, texSkinss].forEach(t => {
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestMipmapLinearFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.generateMipmaps = true;
+});
+
+const texturasSkins = {
+    'kevin.png': texKevin,
+    'kiore.png': texKiore,
+    'palvox.png': texPalvox,
+    'rainbow.png': texRainbow,
+    'skinss.png': texSkinss
+};
+
+// UV helper: convierte coordenadas del atlas 64x64 a UV normalizadas
+function uvRect(x, y, w, h) {
+    // Retorna las 4 esquinas UV para una cara [u1,v1, u2,v1, u1,v2, u2,v2]
+    const u1 = x / 64, u2 = (x + w) / 64;
+    const v1 = 1 - (y + h) / 64, v2 = 1 - y / 64;
+    return [u1, v1, u2, v1, u1, v2, u2, v2];
+}
+
+function aplicarUVs(geom, pX, nX, pY, nY, pZ, nZ) {
+    // Three.js BoxGeometry orden de caras: +X, -X, +Y, -Y, +Z, -Z
+    // Cada cara tiene 4 vértices en este orden:
+    // v0(u1,v2), v1(u2,v2), v2(u1,v1), v3(u2,v1)
+    const caras = [pX, nX, pY, nY, pZ, nZ];
+    const uvAttr = geom.attributes.uv;
+    caras.forEach((uv, i) => {
+        const b = i * 4;
+        const [u1, v1, u2, v2] = uv; // u1,v1=bottom-left u2,v2=top-right
+        uvAttr.setXY(b + 0, u1, v2);
+        uvAttr.setXY(b + 1, u2, v2);
+        uvAttr.setXY(b + 2, u1, v1);
+        uvAttr.setXY(b + 3, u2, v1);
+    });
+    uvAttr.needsUpdate = true;
+}
+
+// uvFlat devuelve [u1, v1, u2, v2] en coordenadas 0-1
+function uvFlat(x, y, w, h) {
+    const pad = 0.05; // margen de medio píxel en atlas 64x64
+    return [
+        (x + pad) / 64,
+        1 - (y + h - pad) / 64,
+        (x + w - pad) / 64,
+        1 - (y + pad) / 64
+    ];
+}
+
+function crearSteve(texturaSkin = null) {
+    const group = new THREE.Group();
+    const texturaUsar = texturaSkin || texSteve;
+    const mat = new THREE.MeshBasicMaterial({ map: texturaUsar, transparent: true, alphaTest: 0.1 });
+
+    // ── UPPER PIVOT — pivot en la cadera (y=0.75) ──
+    // Contiene cuerpo, brazos y cabeza para que inclinen juntos como una unidad
+    const upperPivot = new THREE.Group();
+    upperPivot.position.set(0, 0.75, 0);
+    group.add(upperPivot);
+
+    // ── CABEZA — pivot en base del cuello (y=0.75 relativo a upperPivot = y=1.5 world) ──
+    const headPivot = new THREE.Group();
+    headPivot.position.set(0, 0.75, 0);
+    const gHead = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    aplicarUVs(gHead,
+        uvFlat( 0,  8, 8, 8),
+        uvFlat(16,  8, 8, 8),
+        uvFlat( 8,  0, 8, 8),
+        uvFlat(16,  0, 8, 8),
+        uvFlat( 8,  8, 8, 8),
+        uvFlat(24,  8, 8, 8)
+    );
+    const headMesh = new THREE.Mesh(gHead, mat.clone());
+    headMesh.position.set(0, 0.25, 0);
+    headPivot.add(headMesh);
+    upperPivot.add(headPivot);
+
+    // ── CUERPO — centro 0.375 sobre la cadera ──
+    const gBody = new THREE.BoxGeometry(0.5, 0.75, 0.25);
+    aplicarUVs(gBody,
+        uvFlat(16, 20, 4, 12),
+        uvFlat(28, 20, 4, 12),
+        uvFlat(20, 16, 8,  4),
+        uvFlat(28, 16, 8,  4),
+        uvFlat(20, 20, 8, 12),
+        uvFlat(32, 20, 8, 12)
+    );
+    const bodyMesh = new THREE.Mesh(gBody, mat.clone());
+    bodyMesh.position.set(0, 0.375, 0);
+    upperPivot.add(bodyMesh);
+
+    // ── BRAZO DERECHO — pivot en hombro (y=0.75, x=-0.375 relativo a upperPivot) ──
+    const armRPivot = new THREE.Group();
+    armRPivot.position.set(-0.375, 0.75, 0);
+    const gArmR = new THREE.BoxGeometry(0.25, 0.75, 0.25);
+    aplicarUVs(gArmR,
+        uvFlat(40, 20, 4, 12),
+        uvFlat(48, 20, 4, 12),
+        uvFlat(44, 16, 4,  4),
+        uvFlat(48, 16, 4,  4),
+        uvFlat(44, 20, 4, 12),
+        uvFlat(52, 20, 4, 12)
+    );
+    const armRMesh = new THREE.Mesh(gArmR, mat.clone());
+    armRMesh.position.set(0, -0.375, 0);
+    armRPivot.add(armRMesh);
+    upperPivot.add(armRPivot);
+
+    // ── BRAZO IZQUIERDO — pivot en hombro (y=0.75, x=+0.375 relativo a upperPivot) ──
+    const armLPivot = new THREE.Group();
+    armLPivot.position.set(0.375, 0.75, 0);
+    const gArmL = new THREE.BoxGeometry(0.25, 0.75, 0.25);
+    aplicarUVs(gArmL,
+        uvFlat(48, 20, 4, 12),
+        uvFlat(40, 20, 4, 12),
+        uvFlat(44, 16, 4,  4),
+        uvFlat(48, 16, 4,  4),
+        uvFlat(44, 20, 4, 12),
+        uvFlat(52, 20, 4, 12)
+    );
+    const armLMesh = new THREE.Mesh(gArmL, mat.clone());
+    armLMesh.position.set(0, -0.375, 0);
+    armLPivot.add(armLMesh);
+    upperPivot.add(armLPivot);
+
+    // ── PIERNA DERECHA — pivot en la cadera (y=0.75, x=-0.125) — hijo directo del group ──
+    const legRPivot = new THREE.Group();
+    legRPivot.position.set(-0.125, 0.75, 0);
+    const gLegR = new THREE.BoxGeometry(0.25, 0.75, 0.25);
+    aplicarUVs(gLegR,
+        uvFlat( 0, 20, 4, 12),
+        uvFlat( 8, 20, 4, 12),
+        uvFlat( 4, 16, 4,  4),
+        uvFlat( 8, 16, 4,  4),
+        uvFlat( 4, 20, 4, 12),
+        uvFlat(12, 20, 4, 12)
+    );
+    const legRMesh = new THREE.Mesh(gLegR, mat.clone());
+    legRMesh.position.set(0, -0.375, 0);
+    legRPivot.add(legRMesh);
+    group.add(legRPivot);
+
+    // ── PIERNA IZQUIERDA — pivot en la cadera (y=0.75, x=+0.125) — hijo directo del group ──
+    const legLPivot = new THREE.Group();
+    legLPivot.position.set(0.125, 0.75, 0);
+    const gLegL = new THREE.BoxGeometry(0.25, 0.75, 0.25);
+    aplicarUVs(gLegL,
+        uvFlat( 8, 20, 4, 12),
+        uvFlat( 0, 20, 4, 12),
+        uvFlat( 4, 16, 4,  4),
+        uvFlat( 8, 16, 4,  4),
+        uvFlat( 4, 20, 4, 12),
+        uvFlat(12, 20, 4, 12)
+    );
+    const legLMesh = new THREE.Mesh(gLegL, mat.clone());
+    legLMesh.position.set(0, -0.375, 0);
+    legLPivot.add(legLMesh);
+    group.add(legLPivot);
+
+    group.scale.set(0.9, 0.9, 0.9);
+    return { group, upper: upperPivot, head: headPivot, armR: armRPivot, armL: armLPivot, legR: legRPivot, legL: legLPivot };
+}
+// ===== PREVIEW DE STEVE EN MENÚ PRINCIPAL =====
+let ppRenderer = null;
+let ppScene = null;
+let ppCamera = null;
+let ppSteve = null;
+let ppAnimId = null;
+
+function initStevePrevio() {
+    const cv = document.getElementById('pp-steve-canvas');
+    if (!cv) return;
+    if (ppAnimId) cancelAnimationFrame(ppAnimId);
+    if (ppRenderer) ppRenderer.dispose();
+    
+    let w = cv.clientWidth;
+    let h = cv.clientHeight;
+    if (w === 0 || h === 0) {
+        w = window.innerWidth * 0.25;
+        h = window.innerHeight * 0.8;
+        cv.style.width = w + 'px';
+        cv.style.height = h + 'px';
+    }
+    
+    ppRenderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+    ppRenderer.setSize(w, h);
+    ppRenderer.setPixelRatio(window.devicePixelRatio);
+    ppRenderer.setClearColor(0x000000, 0);
+    
+    ppScene = new THREE.Scene();
+    ppCamera = new THREE.PerspectiveCamera(50, w / h, 0.01, 100);
+    ppCamera.position.set(0, 0.8, 4.5);
+    
+    const ambLight = new THREE.AmbientLight(0xffffff, 1.3);
+    ppScene.add(ambLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(2, 1.5, 1.5);
+    ppScene.add(dirLight);
+    
+    const skinInicial = localStorage.getItem('skinSeleccionada') || 'kevin.png';
+    ppSteve = crearSteve(texturasSkins[skinInicial] || texSteve);
+    ppScene.add(ppSteve.group);
+    ppSteve.group.scale.set(0.35, 0.35, 0.35);
+    
+    function animate() {
+        ppAnimId = requestAnimationFrame(animate);
+        ppSteve.group.rotation.y += 0.008;
+        ppRenderer.render(ppScene, ppCamera);
+    }
+    animate();
+    
+    window.addEventListener('resize', () => {
+        const nw = cv.clientWidth || window.innerWidth * 0.25;
+        const nh = cv.clientHeight || window.innerHeight * 0.8;
+        ppCamera.aspect = nw / nh;
+        ppCamera.updateProjectionMatrix();
+        ppRenderer.setSize(nw, nh);
+    });
+}
+
+function actualizarJugadoresRemotos(playersData) {
+    const currentIds = new Set(playersData.map(p => p.id));
+    for (let [id, obj] of remotePlayers.entries()) {
+        if (!currentIds.has(id)) {
+            scene.remove(obj.mesh);
+            remotePlayers.delete(id);
+        }
+    }
+    playersData.forEach(p => {
+        if (p.id === playerId) return;
+        let entry = remotePlayers.get(p.id);
+        if (!entry) {
+            const skinRemota = p.skin || 'kevin.png';
+            const texturaRemota = texturasSkins[skinRemota] || texSteve;
+            const steve = crearSteve(texturaRemota);
+            scene.add(steve.group);
+            entry = {
+                mesh: steve.group,
+                upper: steve.upper,
+                head: steve.head,
+                armR: steve.armR,
+                armL: steve.armL,
+                legR: steve.legR,
+                legL: steve.legL,
+                moving: false,
+                placingTimer: 0,
+                wasPlacing: false,
+                yOffset: 0,
+                baseY: p.y - 1.62
+            };
+            remotePlayers.set(p.id, entry);
+        }
+        const sneakOffsetTarget = p.sneakOffset || 0;
+        if (entry.sneakOffsetActual === undefined) entry.sneakOffsetActual = sneakOffsetTarget;
+        if (!entry.wasSneaking && entry.sneaking) entry.sneakOffsetActual = sneakOffsetTarget;
+        if (entry.wasSneaking && !entry.sneaking) entry.sneakOffsetActual = 0;
+        entry.wasSneaking = entry.sneaking;
+        entry.sneakOffsetActual += (sneakOffsetTarget - entry.sneakOffsetActual) * 0.35;
+        entry.baseY = p.y - 1.62 + entry.sneakOffsetActual;
+entry.mesh.position.set(p.x, entry.baseY + (entry.yOffset || 0), p.z);
+        entry.mesh.rotation.y = p.yaw + Math.PI;
+        entry.headPitch = -Math.max(-Math.PI / 2, Math.min(Math.PI / 2, p.pitch || 0));
+entry.head.rotation.y = 0;
+        entry.moving = !!p.moving;
+        entry.sprinting = !!p.sprinting;
+        entry.sneaking = !!p.sneaking;
+        
+        if (p.placing && !entry.wasPlacing) entry.placingTimer = 0.3;
+        entry.wasPlacing = !!p.placing;
+    });
+}
+
+// ===== FUNCIONES DE MENÚ =====
+window.mostrarPantallaPrincipal = function() {
+    document.getElementById('pantalla-jugar').classList.remove('activa');
+    document.getElementById('pantalla-ajustes').classList.remove('activa');
+    document.getElementById('pantalla-principal').classList.add('activa');
+    setTimeout(() => initStevePrevio(), 900);
+};
+
+window.mostrarPantallaAjustes = function() {
+    document.getElementById('pantalla-principal').classList.remove('activa');
+    document.getElementById('pantalla-ajustes').classList.add('activa');
+    cargarAjustes();
+};
+
+function cargarAjustes() {
+    const aj = JSON.parse(localStorage.getItem('mc_ajustes') || '{}');
+    
+    document.getElementById('aj-sens').value      = aj.sens     || 6;
+    aplicarAjustes();
+}
+
+window.aplicarAjustes = function() {
+    const sens = parseInt(document.getElementById('aj-sens').value);
+
+    window._sensitivity = sens * 0.001;
+
+    localStorage.setItem('mc_ajustes', JSON.stringify({ sens }));
+};
+
+// ===== MODO EDICIÓN DE CONTROLES =====
+let editSelId = null;
+const editHistorial = [];
+let editHistorialIdx = -1;
+
+function capturarEstadoEdicion() {
+    const estado = {};
+    editElementos.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const opMatch = el.style.background?.match(/rgba\(0,0,0,([\d.]+)\)/);
+        const opVal = opMatch ? Math.round(parseFloat(opMatch[1]) * 100) : 45;
+        const borderW = parseFloat(getComputedStyle(el).borderLeftWidth || 0) + parseFloat(getComputedStyle(el).borderRightWidth || 0);
+        estado[id] = {
+            left: rect.left, top: rect.top,
+            size: Math.round(rect.width - borderW) || (id === 'joystick-container' ? 85 : 52),
+            opacity: opVal
+        };
+    });
+    // Cortar futuros si estamos en medio del historial
+    editHistorial.splice(editHistorialIdx + 1);
+    editHistorial.push(JSON.parse(JSON.stringify(estado)));
+    editHistorialIdx = editHistorial.length - 1;
+    actualizarBotonesUndoRedo();
+}
+
+function aplicarEstadoEdicion(estado) {
+    Object.keys(estado).forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const d = estado[id];
+        el.style.left   = d.left + 'px';
+        el.style.top    = d.top  + 'px';
+        el.style.right  = 'auto';
+        el.style.bottom = 'auto';
+        el.style.width  = d.size + 'px';
+        el.style.height = d.size + 'px';
+        const op = (d.opacity / 100).toFixed(2);
+        el.style.background  = `rgba(0,0,0,${op})`;
+        el.style.borderColor = `rgba(180,180,180,${op})`;
+    });
+    // Actualizar sliders si hay un elemento seleccionado
+    if (editSelId && estado[editSelId]) {
+        const d = estado[editSelId];
+        document.getElementById('edit-sel-size').value    = d.size;
+        document.getElementById('edit-sel-opacity').value = d.opacity;
+    }
+}
+
+function actualizarBotonesUndoRedo() {
+    const undo = document.getElementById('btn-undo');
+    const redo = document.getElementById('btn-redo');
+    if (!undo || !redo) return;
+    undo.style.color = editHistorialIdx > 0 ? 'white' : '#555';
+    redo.style.color = editHistorialIdx < editHistorial.length - 1 ? 'white' : '#555';
+}
+
+window.undoEdicion = function() {
+    if (editHistorialIdx <= 0) return;
+    const estadoAnterior = editHistorial[editHistorialIdx];
+    editHistorialIdx--;
+    const estadoNuevo = editHistorial[editHistorialIdx];
+    aplicarEstadoEdicion(estadoNuevo);
+    actualizarBotonesUndoRedo();
+    let changedId = null;
+    for (const id of Object.keys(estadoAnterior)) {
+        const prev = estadoAnterior[id];
+        const next = estadoNuevo[id];
+        if (!next) continue;
+        if (prev.size !== next.size || prev.opacity !== next.opacity ||
+            Math.abs(prev.left - next.left) > 1 || Math.abs(prev.top - next.top) > 1) {
+            changedId = id; break;
+        }
+    }
+    setTimeout(() => seleccionarElementoEdicion(changedId || editSelId), 0);
+};
+
+window.redoEdicion = function() {
+    if (editHistorialIdx >= editHistorial.length - 1) return;
+    const estadoAnterior = editHistorial[editHistorialIdx];
+    editHistorialIdx++;
+    const estadoNuevo = editHistorial[editHistorialIdx];
+    aplicarEstadoEdicion(estadoNuevo);
+    actualizarBotonesUndoRedo();
+    let changedId = null;
+    for (const id of Object.keys(estadoAnterior)) {
+        const prev = estadoAnterior[id];
+        const next = estadoNuevo[id];
+        if (!next) continue;
+        if (prev.size !== next.size || prev.opacity !== next.opacity ||
+            Math.abs(prev.left - next.left) > 1 || Math.abs(prev.top - next.top) > 1) {
+            changedId = id; break;
+        }
+    }
+    setTimeout(() => seleccionarElementoEdicion(changedId || editSelId), 0);
+};
+const editElementos = [
+    { id: 'joystick-container', label: 'Joystick' },
+    { id: 'jump-btn',   label: 'Saltar' },
+    { id: 'place-btn',  label: 'Colocar' },
+    { id: 'break-btn',  label: 'Atacar' },
+    { id: 'sneak-btn',  label: 'Agachar' },
+    { id: 'sprint-btn', label: 'Sprint' },
+];
+
+function seleccionarElementoEdicion(id) {
+    editElementos.forEach(({ id: eid }) => {
+        const el = document.getElementById(eid);
+        if (el) el.style.outline = '';
+    });
+    editSelId = id;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.outline = '3px solid #fff';
+
+    // Leer tamaño y opacidad ACTUALES del elemento (sin modificarlo)
+    const currentSize = Math.round(el.getBoundingClientRect().width);
+    const opMatch = el.style.background?.match(/rgba\(0,0,0,([\d.]+)\)/);
+    const currentOpacity = opMatch ? Math.round(parseFloat(opMatch[1]) * 100) : 45;
+
+    document.getElementById('edit-sel-size').value    = currentSize;
+    document.getElementById('edit-sel-opacity').value = currentOpacity;
+    document.getElementById('edit-sel-nombre').textContent = editElementos.find(e => e.id === id)?.label || id;
+    document.getElementById('edit-panel-sel').style.display = 'flex';
+    // NO llamar aplicarEdicionSeleccionado aquí para no modificar el elemento
+}
+
+window.aplicarEdicionSeleccionado = function(guardar = false) {
+    if (!editSelId) return;
+    const el = document.getElementById(editSelId);
+    if (!el) return;
+    const size = parseInt(document.getElementById('edit-sel-size').value);
+    const opacity = parseInt(document.getElementById('edit-sel-opacity').value);
+    const op = (opacity / 100).toFixed(2);
+    el.style.width  = size + 'px';
+    el.style.height = size + 'px';
+    el.style.background   = `rgba(0,0,0,${op})`;
+    el.style.borderColor  = `rgba(180,180,180,${op})`;
+    if (guardar) capturarEstadoEdicion();
+};
+
+window.entrarModoEdicionControles = function() {
+    document.getElementById('pantalla-ajustes').classList.remove('activa');
+    cargarPosicionesControles();
+    editSelId = null;
+    editHistorial.length = 0;
+    editHistorialIdx = -1;
+    document.getElementById('edit-panel-sel').style.display = 'none';
+    setTimeout(() => { actualizarBotonesUndoRedo(); }, 100);
+    editElementos.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (el) el.style.outline = '';
+    });
+
+    const overlay = document.getElementById('edit-controles-overlay');
+    overlay.style.display = 'flex';
+
+    editElementos.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.touchAction = 'none';
+        el.dataset.editMode = '1';
+
+        let startX, startY, origLeft, origTop;
+        let hasMoved = false;
+
+        el.addEventListener('touchstart', onEditTouchStart, { passive: false });
+        el.addEventListener('touchmove',  onEditTouchMove,  { passive: false });
+        el.addEventListener('touchend',   onEditTouchEnd,   { passive: false });
+
+        function onEditTouchStart(e) {
+            if (document.getElementById('edit-controles-overlay').style.display === 'none') return;
+            e.preventDefault(); e.stopPropagation();
+            hasMoved = false;
+            const t = e.touches[0];
+            startX = t.clientX; startY = t.clientY;
+            const rect = el.getBoundingClientRect();
+            origLeft = rect.left;
+            origTop  = rect.top;
+        }
+
+        function onEditTouchMove(e) {
+            if (document.getElementById('edit-controles-overlay').style.display === 'none') return;
+            e.preventDefault(); e.stopPropagation();
+            const t = e.touches[0];
+            const dx = t.clientX - startX;
+            const dy = t.clientY - startY;
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hasMoved = true;
+            const newLeft = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  origLeft + dx));
+            const newTop  = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, origTop  + dy));
+            el.style.left   = newLeft + 'px';
+            el.style.top    = newTop  + 'px';
+            el.style.right  = 'auto';
+            el.style.bottom = 'auto';
+        }
+
+        function onEditTouchEnd(e) {
+            e.preventDefault(); e.stopPropagation();
+            if (!hasMoved) seleccionarElementoEdicion(id);
+            else capturarEstadoEdicion();
+        }
+
+        el._editListeners = { onEditTouchStart, onEditTouchMove, onEditTouchEnd };
+    });
+};
+
+function guardarPosicionesControles() {
+    const raw = localStorage.getItem('mc_controles_pos');
+    const pos = raw ? JSON.parse(raw) : {};
+    editElementos.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const borderW = parseFloat(getComputedStyle(el).borderLeftWidth || 0) + parseFloat(getComputedStyle(el).borderRightWidth || 0);
+        const rect2 = el.getBoundingClientRect();
+        const size = Math.round(rect2.width - borderW) || (id === 'joystick-container' ? 85 : 52);
+        const opacity = document.getElementById('edit-sel-opacity')
+            ? (editSelId === id ? parseInt(document.getElementById('edit-sel-opacity').value) : (pos[id]?.opacity || 45))
+            : 45;
+        pos[id] = { left: rect.left, top: rect.top, size, opacity };
+    });
+    localStorage.setItem('mc_controles_pos', JSON.stringify(pos));
+}
+
+function cargarPosicionesControles() {
+    const raw = localStorage.getItem('mc_controles_pos');
+    if (!raw) return;
+    const pos = JSON.parse(raw);
+    Object.keys(pos).forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (pos[id].left !== undefined) {
+            el.style.left   = pos[id].left + 'px';
+            el.style.top    = pos[id].top  + 'px';
+            el.style.right  = 'auto';
+            el.style.bottom = 'auto';
+        }
+        if (pos[id].size) {
+            el.style.width  = pos[id].size + 'px';
+            el.style.height = pos[id].size + 'px';
+        }
+        if (pos[id].opacity !== undefined) {
+            const op = (pos[id].opacity / 100).toFixed(2);
+            el.style.background  = `rgba(0,0,0,${op})`;
+            el.style.borderColor = `rgba(180,180,180,${op})`;
+        }
+    });
+}
+
+window.salirModoEdicionControles = function() {
+    guardarPosicionesControles();
+    document.getElementById('edit-controles-overlay').style.display = 'none';
+
+    // Quitar listeners de edición
+    const ids = ['joystick-container','jump-btn','place-btn','break-btn','sneak-btn','sprint-btn'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || !el._editListeners) return;
+        const { onEditTouchStart, onEditTouchMove, onEditTouchEnd } = el._editListeners;
+        el.removeEventListener('touchstart', onEditTouchStart);
+        el.removeEventListener('touchmove',  onEditTouchMove);
+        el.removeEventListener('touchend',   onEditTouchEnd);
+        delete el._editListeners;
+        delete el.dataset.editMode;
+    });
+
+    mostrarPantallaAjustes();
+};
+
+window.resetearPosicionesControles = function() {
+    localStorage.removeItem('mc_controles_pos');
+    editElementos.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.left = ''; el.style.top = ''; el.style.right = ''; el.style.bottom = '';
+        el.style.width = ''; el.style.height = '';
+        el.style.background = ''; el.style.borderColor = '';
+        el.style.outline = '';
+    });
+    editSelId = null;
+    document.getElementById('edit-panel-sel').style.display = 'none';
+};
+
+window.restaurarAjustes = function() {
+    localStorage.removeItem('mc_ajustes');
+    document.getElementById('aj-sens').value = 6;
+    window._sensitivity = 0.006;
+};
+
+window.cerrarModal = function() {
+    document.getElementById('modal-confirmacion').classList.remove('activo');
+};
+
+window.mostrarModal = function(texto, onAceptar) {
+    document.getElementById('modal-texto').textContent = texto;
+    document.getElementById('modal-confirmacion').classList.add('activo');
+    document.getElementById('modal-btn-si').onclick = () => {
+        cerrarModal();
+        onAceptar();
+    };
+};
+
+// ===== SISTEMA DE MUNDOS =====
+let mundosGuardados = JSON.parse(localStorage.getItem('mundos_lista') || '[]');
+localStorage.removeItem('minecraft_mundo_plano_default');
+localStorage.removeItem('minecraft_mundo_normal_default');
+localStorage.removeItem('posicion_multi_plano');
+localStorage.removeItem('posicion_multi_normal');
+
+let mundoEditandoId = null;
+let tipoSeleccionado = 'plano';
+
+function guardarListaMundos() {
+    localStorage.setItem('mundos_lista', JSON.stringify(mundosGuardados));
+}
+
+function renderizarMundos() {
+    const lista = document.getElementById('lista-mundos');
+    if (!lista) return;
+    if (mundosGuardados.length === 0) {
+        lista.innerHTML = '<div style="color:#aaa;font-family:Courier New;font-size:13px;text-align:center;padding:20px;">No hay mundos creados</div>';
+        return;
+    }
+    lista.innerHTML = '';
+    mundosGuardados.forEach((m, i) => {
+        const div = document.createElement('div');
+        div.className = 'mundo-item';
+        div.innerHTML = `
+            <div class="mundo-item-preview">${m.tipo === 'plano' ? '🌿' : '⛰️'}</div>
+            <div class="mundo-item-info" onclick="entrarMundo(${i})">
+                <div class="mundo-item-nombre">${m.nombre}</div>
+                <div class="mundo-item-tipo">${m.tipo === 'plano' ? 'Plano' : 'Normal'}</div>
+            </div>
+            <div class="mundo-item-fecha" onclick="entrarMundo(${i})">${m.fecha}</div>
+            <div class="mundo-item-editar" onclick="editarMundo(${i})">✏️</div>
+            <div class="mundo-item-editar" style="background:#7a2020;" onclick="eliminarMundo(${i})">🗑️</div>
+        `;
+        lista.appendChild(div);
+    });
+}
+
+window.abrirPanelMundo = function() {
+    mundoEditandoId = null;
+    document.getElementById('panel-mundo-titulo').textContent = 'CREAR MUNDO';
+    document.getElementById('panel-mundo-nombre').value = '';
+    document.getElementById('confirmar-mundo-btn').textContent = 'Crear mundo';
+    document.getElementById('tipo-plano').style.display = '';
+    document.getElementById('tipo-normal').style.display = '';
+    seleccionarTipo('plano');
+    document.getElementById('panel-mundo').classList.add('activo');
+};
+
+window.cerrarPanelMundo = function() {
+    document.getElementById('panel-mundo').classList.remove('activo');
+};
+
+window.seleccionarTipo = function(tipo) {
+    tipoSeleccionado = tipo;
+    document.getElementById('tipo-plano').classList.toggle('activo', tipo === 'plano');
+    document.getElementById('tipo-normal').classList.toggle('activo', tipo === 'normal');
+};
+
+window.confirmarMundo = function() {
+    const nombre = document.getElementById('panel-mundo-nombre').value.trim() || 'Mi mundo';
+    const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    if (mundoEditandoId !== null) {
+        mundosGuardados[mundoEditandoId].nombre = nombre;
+        mundosGuardados[mundoEditandoId].tipo = tipoSeleccionado;
+    } else {
+        const id = Date.now().toString();
+        const semilla = tipoSeleccionado === 'normal' ? Math.floor(Math.random() * 999999) + 1 : 42;
+        mundosGuardados.unshift({ id, nombre, tipo: tipoSeleccionado, fecha, semilla });
+    }
+    guardarListaMundos();
+    renderizarMundos();
+    cerrarPanelMundo();
+};
+
+window.editarMundo = function(i) {
+    mundoEditandoId = i;
+    const m = mundosGuardados[i];
+    document.getElementById('panel-mundo-titulo').textContent = 'EDITAR MUNDO';
+    document.getElementById('panel-mundo-nombre').value = m.nombre;
+    document.getElementById('confirmar-mundo-btn').textContent = 'Guardar cambios';
+    document.getElementById('tipo-plano').style.display = 'none';
+    document.getElementById('tipo-normal').style.display = 'none';
+    document.getElementById('panel-mundo').classList.add('activo');
+};
+
+window.eliminarMundo = function(i) {
+    mostrarModal('¿Eliminar "' + mundosGuardados[i].nombre + '"? Se perderán todos los cambios.', () => {
+        const m = mundosGuardados[i];
+        localStorage.removeItem('minecraft_mundo_' + m.tipo + '_' + m.id);
+        mundosGuardados.splice(i, 1);
+        guardarListaMundos();
+        renderizarMundos();
+    });
+};
+
+window.entrarMundo = function(i) {
+    const m = mundosGuardados[i];
+    if (mundoIniciado) guardarMundo();
+    tipoMundoActual = m.tipo;
+    mundoIdActual = m.id;
+    mundoNombreActual = m.nombre;
+    noise = new SimplexNoise(m.semilla || 42);
+    manualBlocks.forEach(b => scene.remove(b));
+    manualBlocks.length = 0;
+    brokenInstances.clear();
+    brokenTerrain.clear();
+    sandBlocks.length = 0;
+    iniciarMundo(m.tipo, false);
+};
+renderizarMundos();
+
+window.resetearMundo = function(tipo) {
+    mostrarModal(
+        '¿Seguro que quieres restablecer el Mundo ' + (tipo === 'plano' ? 'Plano' : 'Normal') + '? Se perderán todos los cambios.',
+        () => {
+            localStorage.removeItem('minecraft_mundo_' + tipo);
+            localStorage.removeItem('posicion_multi_' + tipo);
+        }
+    );
+};
+
+window.mostrarPantallaJugar = function() {
+    document.getElementById('pantalla-principal').classList.remove('activa');
+    document.getElementById('pantalla-jugar').classList.add('activa');
+    cambiarTab('mundos');
+    renderizarMundos()
+};
+
+
+
+window.cambiarTab = function(tab) {
+    document.getElementById('contenido-mundos').classList.toggle('activa', tab === 'mundos');
+    document.getElementById('contenido-multi').classList.toggle('activa', tab === 'multi');
+    document.getElementById('tab-mundos').classList.toggle('activa', tab === 'mundos');
+    document.getElementById('tab-multi').classList.toggle('activa', tab === 'multi');
+    if (tab === 'multi') actualizarSalas();
+};
+
+window.actualizarSalas = function() {
+    const lista = document.getElementById('lista-salas');
+    const estado = document.getElementById('estado-servidor');
+    lista.innerHTML = '<div class="sala-vacia">Buscando partidas...</div>';
+    if (estado) { estado.textContent = '🟡 Conectando...'; estado.style.color = '#ff0'; }
+
+    const wsTemp = new WebSocket('wss://minecraft-server2-bnn6.onrender.com');
+
+    wsTemp.onopen = () => {
+        if (estado) { estado.textContent = '🟢 Conectado'; estado.style.color = '#0f0'; }
+        wsTemp.send(JSON.stringify({ type: 'get_salas' }));
+    };
+
+    wsTemp.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'salas') {
+            lista.innerHTML = '';
+            if (data.salas.length === 0) {
+                lista.innerHTML = '<div class="sala-vacia">No hay partidas activas</div>';
+            } else {
+                data.salas.forEach(sala => {
+                    const div = document.createElement('div');
+                    div.className = 'sala-item';
+                    div.textContent = `🎮 ${sala.nombre} — ${sala.jugadores} jugador(es)`;
+                    div.onclick = () => { 
+                        wsTemp.close(); 
+                        salaIdActual = sala.salaId;
+                        mundoNombreActual = sala.nombre;
+                        iniciarMundo(sala.mundo, true); 
+                    };
+                    lista.appendChild(div);
+                });
+            }
+            wsTemp.close();
+        }
+    };
+
+    wsTemp.onerror = () => {
+        lista.innerHTML = '<div class="sala-vacia">Error al conectar al servidor</div>';
+        if (estado) { estado.textContent = '🔴 Sin conexión'; estado.style.color = '#f00'; }
+    };
+
+    wsTemp.onclose = () => {
+        if (estado && estado.textContent.includes('Conectando')) {
+            estado.textContent = '🔴 Sin conexión'; estado.style.color = '#f00';
+        }
+    };
+};
+
+function aplicarEventoBloque(data) {
+    if (data.type === 'block_place') {
+        // Verificar si ya existe un bloque en esa posición (evita duplicados)
+        const yaExiste = manualBlocks.some(b =>
+            Math.abs(b.position.x - data.x) < 0.1 &&
+            Math.abs(b.position.y - data.y) < 0.1 &&
+            Math.abs(b.position.z - data.z) < 0.1
+        );
+        if (yaExiste) return;
+        
+        if (data.mat === 'water') waterSources.add(waterKey(data.x, data.y, data.z));
+        const b = crearMeshManual(data.mat);
+        b.position.set(data.x, data.y, data.z);
+        scene.add(b);
+        manualBlocks.push(b);
+        if (data.mat === 'sand') {
+            b.userData.isSand = true;
+            b.userData.falling = true;
+            sandBlocks.push(b);
+        }
+    } else if (data.type === 'block_break') {
+        // Redondear coordenadas para comparación exacta
+        const bx = Math.round(data.x);
+        const by = Math.round(data.y);
+        const bz = Math.round(data.z);
+        
+        // Buscar en manualBlocks (bloques colocados por jugadores)
+        let idx = -1;
+        for (let i = 0; i < manualBlocks.length; i++) {
+            const b = manualBlocks[i];
+            if (Math.abs(b.position.x - bx) < 0.1 &&
+                Math.abs(b.position.y - by) < 0.1 &&
+                Math.abs(b.position.z - bz) < 0.1) {
+                idx = i;
+                break;
+            }
+        }
+        
+        if (idx !== -1) {
+            const bloque = manualBlocks[idx];
+            scene.remove(bloque);
+            manualBlocks.splice(idx, 1);
+            // También eliminar de sandBlocks si existe
+            const sandIdx = sandBlocks.findIndex(sb => sb === bloque);
+            if (sandIdx !== -1) sandBlocks.splice(sandIdx, 1);
+        } else {
+            // Es bloque de terreno (chunk)
+            const key = `${bx},${by},${bz}`;
+            if (!brokenTerrain.has(key)) {
+                brokenTerrain.add(key);
+                const cx = Math.floor(bx / CHUNK_SIZE);
+                const cz = Math.floor(bz / CHUNK_SIZE);
+                const ck = chunkKey(cx, cz);
+                if (activeChunks.has(ck)) {
+                    descargarChunk(ck);
+                    cargarChunk(cx, cz, tipoMundoChunks);
+                }
+            }
+        }
+    }
+}
+
+function enviarEstadoJugador() {
+    if (!socket || socket.readyState !== 1 || !playerId) return;
+    const skinGuardada = localStorage.getItem('skinSeleccionada') || 'kevin.png';
+    socket.send(JSON.stringify({
+        type: 'state',
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z,
+        yaw,
+        pitch,
+        moving: (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05),
+        sprinting: sprintActivo && (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05),
+        placing: localPlacingFrames > 0,
+        sneaking: sneakActivo,
+sneakOffset: sneakOffsetActual,
+        mundo: tipoMundoActual,
+        nombre: mundoNombreActual,
+        esMulti: true,
+        salaId: salaIdActual,
+        skin: skinGuardada
+    }));
+    if (localPlacingFrames > 0) localPlacingFrames--;
+}
+
+                // 5. EVENTOS (Joystick, Mirada y Botones de Acción)
+        const knob = document.getElementById('joystick-knob');
+        const container = document.getElementById('joystick-container');
+        let joyRect = container.getBoundingClientRect();
+
+function actualizarJoyRect() {
+    joyRect = container.getBoundingClientRect();
+}
+
+        window.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                actualizarJoyRect();
+                const isJoy = (t.clientX > joyRect.left && t.clientX < joyRect.right && t.clientY > joyRect.top && t.clientY < joyRect.bottom);
+                if (isJoy && moveTouchId === null) moveTouchId = t.identifier;
+                else if (lookTouchId === null) { 
+                    const isBtn = t.target.closest('.action-button') || t.target.closest('.hotbar-slot') || t.target.closest('#sprint-btn');
+                    if (!isBtn) {
+                        lookTouchId = t.identifier; 
+                        lastTouchX = t.clientX; 
+                        lastTouchY = t.clientY; 
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#edit-controles-overlay')) return;
+            if (e.target.closest('#pantalla-ajustes')) return;
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === moveTouchId) {
+                    actualizarJoyRect();
+                    let dx = t.clientX - (joyRect.left + joyRect.width / 2), dy = t.clientY - (joyRect.top + joyRect.height / 2);
+                    let lx = Math.max(-50, Math.min(50, dx)), ly = Math.max(-50, Math.min(50, dy));
+                    moveX = lx / 35; moveZ = ly / 35;
+                    currentSpeed = sprintActivo ? sprintSpeed : moveSpeed;
+                    knob.style.transform = `translate(${lx}px, ${ly}px)`;
+                }
+                if (t.identifier === lookTouchId) {
+                    const sens = window._sensitivity || sensitivity;
+                    yaw -= (t.clientX - lastTouchX) * sens;
+                    pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch - (t.clientY - lastTouchY) * sens));
+                    pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch - (t.clientY - lastTouchY) * sensitivity));
+                    camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+                    lastTouchX = t.clientX; lastTouchY = t.clientY;
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === moveTouchId) { 
+                    moveTouchId = null; moveX = 0; moveZ = 0; 
+                    knob.style.transform = `translate(0,0)`;
+                    sprintActivo = false;
+                    currentSpeed = moveSpeed;
+                    document.getElementById('sprint-btn').classList.remove('activo');
+                }
+                if (t.identifier === lookTouchId) lookTouchId = null;
+            }
+        });
+
+        const RENDER_DISTANCE = 24;
+let _cacheMeshesActivos = [];
+let _cacheMeshesSolidos = [];
+let _cacheMeshesFrame = -1;
+
+function getMeshesActivos() {
+    if (_cacheMeshesFrame === hitFrame) return _cacheMeshesActivos;
+    const cercanos = manualBlocks.filter(b =>
+        Math.abs(b.position.x - camera.position.x) <= RENDER_DISTANCE &&
+        Math.abs(b.position.z - camera.position.z) <= RENDER_DISTANCE
+    );
+    _cacheMeshesActivos = [...getChunkMeshes(), ...cercanos, ...waterMeshes.values()];
+    _cacheMeshesSolidos = [...getChunkMeshes(), ...cercanos.filter(b => !b.userData.isWater)];
+    _cacheMeshesFrame = hitFrame;
+    return _cacheMeshesActivos;
+}
+function getMeshesSolidos() {
+    if (_cacheMeshesFrame === hitFrame) return _cacheMeshesSolidos;
+    getMeshesActivos();
+    return _cacheMeshesSolidos;
+}
+
+function getSelectedMat() {
+    if (typeof invSlots === 'undefined') return materials;
+    const slot = invSlots[selectedSlot];
+    if (!slot || !slot.mat) return null;
+    if (!(slot.mat in materialPorNombre)) return null;
+    return materialPorNombre[slot.mat];
+}
+
+function realizarAccion(tipo) {
+    
+    actualizarPointer();
+    raycaster.setFromCamera(pointer, camera);
+    const rayPoner = new THREE.Raycaster();
+    rayPoner.near = 0;
+    rayPoner.far = 5;
+    rayPoner.setFromCamera(pointer, camera);
+    
+    const objetosBuscados = getMeshesActivos();
+    const hitsRomper = raycaster.intersectObjects(objetosBuscados).filter(h => {
+        if (h.object instanceof THREE.InstancedMesh) {
+            const rotos = brokenInstances.get(h.object);
+            return !(rotos && rotos.has(h.instanceId));
+        }
+        return true;
+    });
+    
+    const hitsPoner = rayPoner.intersectObjects(objetosBuscados).filter(h =>
+        !(h.object instanceof THREE.InstancedMesh && brokenInstances.get(h.object)?.has(h.instanceId))
+    );
+    
+    const hits = tipo === 'poner' ? hitsPoner : hitsRomper;
+    
+
+    if (hits.length > 0 && hits[0].distance <= 4.5) {
+        const target = hits[0].object;
+        
+        
+        if (tipo === 'romper') {
+            const esChunk = target.userData.isChunk || target.name === "chunk_mesh" || getChunkMeshes().includes(target);
+            if (target.userData.isWater) {
+                return;
+            } else if (esChunk) {
+                
+                romperBloqueChunk(hits[0], target);
+            } else {
+                
+                const bx = Math.round(target.position.x);
+                const by = Math.round(target.position.y);
+                const bz = Math.round(target.position.z);
+                scene.remove(target);
+                const idx = manualBlocks.indexOf(target);
+                if (idx !== -1) manualBlocks.splice(idx, 1);
+                if (socket && socket.readyState === 1) {
+                    socket.send(JSON.stringify({ type: 'block_break', x: target.position.x, y: target.position.y, z: target.position.z, mundo: tipoMundoActual, salaId: salaIdActual }));
+                }
+                setTimeout(() => {
+                    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz]) => {
+                        const vx = bx+dx, vy = by+dy, vz = bz+dz;
+                        if (esAgua(vx,vy,vz)) {
+                            const vn = waterNiveles.get(waterKey(vx,vy,vz)) ?? 8;
+                            if (vn === 0) fluirAgua(vx,vy,vz,0);
+                            else fluirAgua(vx,vy,vz,vn);
+                        }
+                    });
+                }, 100);
+            }
+        } else if (tipo === 'poner') {
+            if (target.userData.isWater) {
+                const hp = hits[0].point;
+                let mejorK = null, mejorDist = 999, mejorNivel = 8;
+                waterPositions.forEach(k => {
+                    const [wx,wy,wz] = k.split(',').map(Number);
+                    const d = Math.abs(wx - hp.x) + Math.abs(wy - hp.y) + Math.abs(wz - hp.z);
+                    if (d < mejorDist) { mejorDist = d; mejorK = k; mejorNivel = waterNiveles.get(k) ?? 8; }
+                });
+                if (mejorK) {
+                    const [wx,wy,wz] = mejorK.split(',').map(Number);
+                    const matSeleccionada = invSlots[selectedSlot]?.mat;
+                    if (matSeleccionada === 'bucket_empty') {
+    if (mejorNivel !== 0) return;
+    quitarAgua(wx, wy, wz);
+    return;
+} else {
+                        const matActual = getSelectedMat();
+                        if (matActual && matSeleccionada !== 'water') {
+                            if (mejorNivel === 0) {
+                                waterGeneracion++;
+                                const todasAgua = [...waterPositions];
+                                todasAgua.sort((a, b) => (waterNiveles.get(b) ?? 0) - (waterNiveles.get(a) ?? 0));
+                                const fuenteK = waterKey(wx, wy, wz);
+                                waterPositions.delete(fuenteK);
+                                waterNiveles.delete(fuenteK);
+                                waterFlujo.delete(fuenteK);
+                                reconstruirBloqueAgua(wx, wy, wz);
+                                todasAgua.filter(wk => wk !== fuenteK).forEach((wk, i) => {
+                                    setTimeout(() => {
+                                        if (!waterPositions.has(wk)) return;
+                                        const [ax,ay,az] = wk.split(',').map(Number);
+                                        waterPositions.delete(wk);
+                                        waterNiveles.delete(wk);
+                                        waterFlujo.delete(wk);
+                                        reconstruirBloqueAgua(ax,ay,az);
+                                    }, i * 17);
+                                });
+                            } else {
+                                quitarAgua(wx, wy, wz);
+                            }
+                            const b = crearMeshManual(matSeleccionada);
+                            b.position.set(wx, wy, wz);
+                            scene.add(b);
+                            manualBlocks.push(b);
+                            if (socket && socket.readyState === 1) {
+                                socket.send(JSON.stringify({ type: 'block_place', x: wx, y: wy, z: wz, mat: matSeleccionada || 'grass', mundo: tipoMundoActual, salaId: salaIdActual }));
+                            }
+                        }
+                    }
+                }
+                
+                return;
+            }
+            let instancePos = new THREE.Vector3();
+            if (target instanceof THREE.InstancedMesh) {
+                const matrix = new THREE.Matrix4();
+                target.getMatrixAt(hits[0].instanceId, matrix);
+                instancePos.setFromMatrixPosition(matrix);
+            } else if (target.userData.isChunk) {
+                const n = hits[0].face.normal;
+                instancePos.set(Math.round(hits[0].point.x - n.x * 0.5), Math.round(hits[0].point.y - n.y * 0.5), Math.round(hits[0].point.z - n.z * 0.5));
+            } else { instancePos.copy(target.position); }
+            
+            const worldNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld);
+            let faceNormal = new THREE.Vector3(Math.round(worldNormal.x), Math.round(worldNormal.y), Math.round(worldNormal.z));
+            const pos = new THREE.Vector3().copy(instancePos).add(faceNormal);
+            
+            const jugadorMin = new THREE.Vector3(camera.position.x - 0.28, camera.position.y - 1.55, camera.position.z - 0.28);
+            const jugadorMax = new THREE.Vector3(camera.position.x + 0.28, camera.position.y + 0.1, camera.position.z + 0.28);
+            const bloqueMin = new THREE.Vector3(pos.x - 0.5, pos.y - 0.5, pos.z - 0.5);
+            const bloqueMax = new THREE.Vector3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5);
+            
+            const feetY = camera.position.y - 1.62;
+            const esPillarJump = isJumping && velocityY > 0 && pos.y <= feetY;
+            const colisionJugador = !esPillarJump && (pos.x + 0.5 > jugadorMin.x && pos.x - 0.5 < jugadorMax.x && pos.y + 0.5 > jugadorMin.y && pos.y - 0.5 < jugadorMax.y && pos.z + 0.5 > jugadorMin.z && pos.z - 0.5 < jugadorMax.z);
+            
+            if (!colisionJugador) {
+                const matActual = getSelectedMat();
+                if (!matActual && invSlots[selectedSlot]?.mat !== 'water') return;
+                if (invSlots[selectedSlot]?.mat === 'water') {
+                    waterSources.add(waterKey(pos.x, pos.y, pos.z));
+                    agregarAgua(pos.x, pos.y, pos.z);
+                    if (socket && socket.readyState === 1) {
+                        socket.send(JSON.stringify({ type: 'block_place', x: pos.x, y: pos.y, z: pos.z, mat: 'water', mundo: tipoMundoActual, salaId: salaIdActual }));
+                    }
+                    return;
+                }
+                const b = crearMeshManual(invSlots[selectedSlot]?.mat);
+                b.position.copy(pos);
+                scene.add(b);
+                manualBlocks.push(b);
+                if (socket && socket.readyState === 1) {
+                    socket.send(JSON.stringify({ type: 'block_place', x: pos.x, y: pos.y, z: pos.z, mat: invSlots[selectedSlot]?.mat || 'grass', mundo: tipoMundoActual, salaId: salaIdActual }));
+                }
+                
+            }
+        }
+    } else {
+        
+    }
+}
+
+
+        let sneakActivo = false;
+let sneakOffsetActual = 0;
+let sneakTargetY = null;
+const SNEAK_OFFSET = 0.35;
+const sneakBtn = document.getElementById('sneak-btn');
+sneakBtn.addEventListener('touchstart', (e) => {
+    if (document.getElementById('edit-controles-overlay').style.display !== 'none') return;
+    e.preventDefault();
+    sneakPressed = true;
+    const ahoraSn = performance.now();
+    if (ahoraSn - lastSneakTap < 300) {
+        if (volarActivo) { volarActivo = false; velocityY = 0; lastSneakTap = 0; return; }
+    }
+    lastSneakTap = ahoraSn;
+    if (volarActivo) return;
+    sneakActivo = !sneakActivo;
+    sneakBtn.classList.toggle('activo', sneakActivo);
+    if (sneakActivo) {
+        sprintActivo = false;
+        currentSpeed = moveSpeed;
+        document.getElementById('sprint-btn').classList.remove('activo');
+    }
+});
+sneakBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    sneakPressed = false;
+});
+
+        let jumpPressed = false;
+let sneakPressed = false;
+document.getElementById('jump-btn').addEventListener('touchstart', (e) => { 
+    if (document.getElementById('edit-controles-overlay').style.display !== 'none') return;
+    e.preventDefault();
+    jumpPressed = true;
+    const ahora = performance.now();
+    if (ahora - lastJumpTap < 300) {
+        if (!volarActivo) { volarActivo = true; velocityY = 0; }
+        lastJumpTap = 0;
+        return;
+    }
+    lastJumpTap = ahora;
+    if (!volarActivo && !isJumping) { 
+        velocityY = jumpForce; 
+        isJumping = true;
+    } 
+});
+document.getElementById('jump-btn').addEventListener('touchend', (e) => {
+    e.preventDefault();
+    jumpPressed = false;
+});
+        document.getElementById('break-btn').addEventListener('touchstart', (e) => { 
+    if (document.getElementById('edit-controles-overlay').style.display !== 'none') return;
+    e.preventDefault(); localPlacingFrames = 5; realizarAccion('romper'); 
+});
+document.getElementById('place-btn').addEventListener('touchstart', (e) => { 
+    if (document.getElementById('edit-controles-overlay').style.display !== 'none') return;
+    e.preventDefault(); localPlacingFrames = 5; realizarAccion('poner'); 
+});
+
+document.getElementById('sprint-btn').addEventListener('touchstart', (e) => {
+    if (document.getElementById('edit-controles-overlay').style.display !== 'none') return;
+    if (sneakActivo) return;
+    sprintActivo = !sprintActivo;
+    currentSpeed = sprintActivo ? sprintSpeed : moveSpeed;
+    document.getElementById('sprint-btn').classList.toggle('activo', sprintActivo);  
+});
+
+
+function volverAlMenu() {
+    guardarMundo();
+    volarActivo = false;
+    jumpPressed = false;
+    sneakPressed = false;
+    mundoIniciado = false;
+    remotePlayers.forEach((j) => scene.remove(j.mesh));
+    remotePlayers.clear();
+    if (socket) { socket.close(); socket = null; }
+
+    const pantallaGuardado = document.getElementById('pantalla-guardado');
+    pantallaGuardado.style.display = 'flex';
+    setTimeout(() => {
+        pantallaGuardado.style.display = 'none';
+        document.getElementById('pantalla-principal').classList.add('activa');
+        renderizarMundos();
+    }, 1800);
+}
+
+const btnVolver = document.getElementById('btn-volver');
+if (btnVolver) {
+    btnVolver.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        volverAlMenu();
+    });
+
+    btnVolver.addEventListener('click', (e) => {
+        if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+        volverAlMenu();
+    });
+}
+        
+                        // ===== INVENTARIO =====
+        window.invSlots = {}; // idx -> { mat, html }
+        const invSlots = window.invSlots;
+        // Inicializar hotbar
+        const initHotbar = [
+            { mat: 'grass' }, { mat: 'stone' }, { mat: 'wood' },
+            { mat: 'dirt'  }, { mat: 'glass' }, { mat: 'sand'  },
+            { mat: 'iron'  }, { mat: 'oaklog'}, { mat: 'brick' },
+            { mat: 'water' },
+        ];
+        initHotbar.forEach((item, i) => { invSlots[i] = item; });
+        const concretosInv = [
+    { mat: 'c_red' }, { mat: 'c_black' }, { mat: 'c_lgray' },
+    { mat: 'c_yellow' }, { mat: 'c_lblue' }, { mat: 'c_orange' },
+    { mat: 'c_magenta' }, { mat: 'c_lime' }, { mat: 'c_brown' },
+];
+concretosInv.forEach((item, i) => { invSlots[9 + i] = item; });
+for (let i = 18; i < 36; i++) invSlots[i] = { mat: null };
+invSlots[18] = { mat: 'oak_leaves' };
+invSlots[19] = { mat: 'water' };
+invSlots[20] = { mat: 'bucket_empty' };
+
+// ===== ICONOS ISOMÉTRICOS =====
+const iconosBloques = new Map();
+const defIconos = {
+    grass:      ['grass_carried.png',        'grass_side_carried.png'],
+    dirt:       ['dirt.png',                 'dirt.png'],
+    stone:      ['stone.png',                'stone.png'],
+    wood:       ['planks_oak.png',           'planks_oak.png'],
+    glass:      ['glass.png',               'glass.png'],
+    sand:       ['sand.png',                'sand.png'],
+    iron:       ['iron_block.png',          'iron_block.png'],
+    brick:      ['brick.png',               'brick.png'],
+    oaklog:     ['log_oak_top.png',         'log_oak.png'],
+    oak_leaves: ['leaves_oak.png',   'leaves_oak.png'],
+    water:      ['bucket_water.png', null],
+    bucket_empty: ['bucket_empty.png', null],
+    c_red:      ['concrete_red.png',        'concrete_red.png'],
+    c_black:    ['concrete_black.png',      'concrete_black.png'],
+    c_lgray:    ['concrete_silver.png',     'concrete_silver.png'],
+    c_yellow:   ['concrete_yellow.png',     'concrete_yellow.png'],
+    c_lblue:    ['concrete_light_blue.png', 'concrete_light_blue.png'],
+    c_orange:   ['concrete_orange.png',     'concrete_orange.png'],
+    c_magenta:  ['concrete_magenta.png',    'concrete_magenta.png'],
+    c_lime:     ['concrete_lime.png',       'concrete_lime.png'],
+    c_brown:    ['concrete_brown.png',      'concrete_brown.png'],
+};
+
+function cargarImgIcono(url) {
+    return new Promise(res => {
+        const img = new Image();
+        img.onload = () => res(img);
+        img.onerror = () => res(null);
+        img.src = url;
+    });
+}
+
+function dibujarIcono(imgTop, imgSide, size = 32, tinte = null) {
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const s = size;
+    function face(img, a, b, c, d, e, f, bright) {
+        if (!img) return;
+        const w = img.naturalWidth || img.width || ATLAS_TILE;
+        const h = img.naturalHeight || img.height || ATLAS_TILE;
+        ctx.save();
+        ctx.setTransform(a/w, b/w, c/h, d/h, e, f);
+        ctx.filter = bright < 1 ? `brightness(${bright})` : 'none';
+        ctx.drawImage(img, 0, 0, w, h);
+        ctx.filter = 'none';
+        ctx.restore();
+    }
+    face(imgTop,  s/2, -s/4,  s/2, s/4, 0,   s/4, 1.0);
+    face(imgSide, s/2,  s/4,  0,   s/2, 0,   s/4, 0.8);
+    face(imgSide, s/2, -s/4,  0,   s/2, s/2, s/2, 0.6);
+    // Aplicar tinte DESPUÉS de dibujar todas las caras
+    if (tinte) {
+        const tmp = document.createElement('canvas');
+        tmp.width = size; tmp.height = size;
+        const tctx = tmp.getContext('2d');
+        tctx.drawImage(cv, 0, 0);
+        tctx.globalCompositeOperation = 'multiply';
+        tctx.fillStyle = tinte;
+        tctx.fillRect(0, 0, size, size);
+        tctx.globalCompositeOperation = 'destination-in';
+        tctx.drawImage(cv, 0, 0);
+        ctx.clearRect(0, 0, size, size);
+        ctx.drawImage(tmp, 0, 0);
+    }
+    return cv;
+}
+
+function generarIconos() {
+    const promesas = [];
+    for (const [mat, [urlTop, urlSide]] of Object.entries(defIconos)) {
+        if (urlSide === null) {
+            promesas.push(cargarImgIcono(urlTop).then(img => {
+                if (img) iconosBloques.set(mat, urlTop);
+            }));
+        } else {
+            promesas.push(Promise.all([cargarImgIcono(urlTop), cargarImgIcono(urlSide)]).then(([imgTop, imgSide]) => {
+                if (!imgTop || !imgSide) return;
+                const tinte = mat === 'oak_leaves' ? '#48b518' : null;
+                const cv = dibujarIcono(imgTop, imgSide, 80, tinte);
+                iconosBloques.set(mat, cv.toDataURL());
+            }));
+        }
+    }
+    Promise.all(promesas).then(() => { syncHotbarUI(); renderInvSlots(); });
+}
+generarIconos();
+
+        // Cargar posiciones guardadas del inventario
+        const invLayoutGuardado = localStorage.getItem('invSlots_layout');
+        if (invLayoutGuardado) {
+            const saved = JSON.parse(invLayoutGuardado);
+            Object.keys(saved).forEach(k => { if (saved[k].mat !== undefined) invSlots[k] = saved[k]; });
+        }
+        setTimeout(() => syncHotbarUI(), 600);
+
+        let invItemAgarrado = null; // { idx, mat, html }
+
+        function getMatObj(matNombre) {
+            return materialPorNombre[matNombre] || null;
+        }
+
+        function syncHotbarUI() {
+    for (let i = 0; i < 9; i++) {
+        const sl = document.getElementById('slot-' + i);
+        if (!sl) continue;
+        sl.innerHTML = '';
+        const url = iconosBloques.get(invSlots[i]?.mat);
+        if (url) {
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = 'width:72%;height:72%;image-rendering:pixelated;';
+            sl.appendChild(img);
+        }
+    }
+}
+
+        function renderInvSlots() {
+    document.querySelectorAll('.inv-s').forEach(el => {
+        const idx = parseInt(el.dataset.idx);
+        el.innerHTML = '';
+        const url = iconosBloques.get(invSlots[idx]?.mat);
+        if (url) {
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = 'width:75%;height:75%;image-rendering:pixelated;';
+            el.appendChild(img);
+        }
+        el.classList.remove('activo', 'seleccionado');
+        if (idx === selectedSlot) el.classList.add('seleccionado');
+    });
+}
+
+        window.abrirInv = function() {
+    renderInvSlots();
+    document.getElementById('inv-overlay').classList.add('activo');
+};
+
+document.getElementById('inv-caja').addEventListener('touchstart', e => e.stopPropagation());
+document.getElementById('inv-caja').addEventListener('touchmove', e => e.stopPropagation());
+document.getElementById('inv-caja').addEventListener('touchend', e => e.stopPropagation());
+document.getElementById('inv-overlay').addEventListener('touchstart', e => { e.stopPropagation(); });
+
+        window.cerrarInv = function() {
+    document.getElementById('inv-overlay').classList.remove('activo');
+    invItemAgarrado = null;
+    document.querySelectorAll('.inv-s').forEach(s => s.classList.remove('agarrado'));
+};
+
+        document.querySelectorAll('.inv-s').forEach(el => {
+            el.addEventListener('click', () => {
+                const idx = parseInt(el.dataset.idx);
+                if (invItemAgarrado === null) {
+                    // Agarrar ítem
+                    if (!invSlots[idx].mat && invSlots[idx].html === '') return;
+                    invItemAgarrado = { idx, ...invSlots[idx] };
+                    document.querySelectorAll('.inv-s').forEach(s => s.classList.remove('agarrado'));
+                    el.classList.add('agarrado');
+                } else {
+                    // Soltar ítem — intercambiar
+                    const destSlot = { ...invSlots[idx] };
+                    invSlots[idx] = { mat: invItemAgarrado.mat };
+                    invSlots[invItemAgarrado.idx] = destSlot;
+                    invItemAgarrado = null;
+                    document.querySelectorAll('.inv-s').forEach(s => s.classList.remove('agarrado'));
+                    syncHotbarUI();
+                    renderInvSlots();
+                    // Guardar posiciones del inventario
+                    const invData = {};
+                    Object.keys(invSlots).forEach(k => { invData[k] = { mat: invSlots[k].mat }; });
+                    localStorage.setItem('invSlots_layout', JSON.stringify(invData));
+                    // Actualizar material activo
+                    const slotActivo = invSlots[selectedSlot];
+                    let selectedMat = slotActivo.mat ? (getMatObj(slotActivo.mat) || materials) : null;
+                }
+            });
+        });
+
+        // Lógica de selección única y limpia
+        const slotsUI = document.querySelectorAll('.hotbar-slot');
+        slotsUI.forEach(slot => {
+            slot.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Limpiar bordes de todos
+                slotsUI.forEach(s => {
+                    s.style.border = "4px solid rgba(139, 139, 139, 0.5)";
+                    s.style.boxShadow = "none";
+                });
+                
+                // Seleccionar el actual
+                slot.style.border = "4px solid white";
+slot.style.boxShadow = "0 0 5px white";
+selectedSlot = parseInt(slot.id.split('-')[1]);
+            });
+        });
+
+
+
+                                // 6. BUCLE DE ANIMACIÓN
+        let lastTime = performance.now();
+        let frames = 0;
+        let prevTime = performance.now();
+        const fpsDisplay = document.getElementById('fps-counter');
+        let cachedSelectionHits = [];
+
+        let clock = new THREE.Clock();
+
+
+        const tempMatrix = new THREE.Matrix4();
+const tempDir = new THREE.Vector3();
+const tempOriginFeet = new THREE.Vector3();
+const tempOriginHead = new THREE.Vector3();
+const rayFeet = new THREE.Raycaster();
+const rayHead = new THREE.Raycaster();
+let hitFrame = 0;
+
+let mundoIniciado = false;
+const waterOverlayEl = document.getElementById('water-overlay');
+let spawnY = 2.12;
+function animate() {
+    requestAnimationFrame(animate);
+    
+    const now = performance.now();
+    clock.getDelta(); // mantener el clock actualizado
+
+    // Contador de FPS para mostrar en pantalla
+    frames++;
+    if (now >= prevTime + 500) {
+        const fps = Math.round((frames * 1000) / (now - prevTime));
+        fpsDisplay.innerText = `FPS: ${fps}`;
+        
+        fpsDisplay.style.color = fps < 30 ? '#f00' : (fps < 50 ? '#ff0' : '#0f0');
+        frames = 0;
+        prevTime = now;
+        
+        const px = Math.floor(camera.position.x);
+const py = Math.floor(camera.position.y - 1.62);
+const pz = Math.floor(camera.position.z);
+document.getElementById('coord-xyz').textContent = `X: ${px}  Y: ${py}  Z: ${pz}`;
+    }
+
+    const delta = Math.min((now - lastTime) / 33.33, 1.5);
+    lastTime = now;
+    
+    
+
+
+    
+    if (!mundoIniciado) {
+    renderer.render(scene, camera);
+    return;
+}
+
+enviarEstadoJugador();
+
+const eyeWX = Math.round(camera.position.x);
+const eyeWY = Math.round(camera.position.y);
+const eyeWZ = Math.round(camera.position.z);
+const bajoAgua = waterPositions.has(waterKey(eyeWX, eyeWY, eyeWZ));
+if (bajoAgua) {
+    waterOverlayEl.style.display = 'block';
+    scene.fog.color.setHex(0x041a3a);
+    scene.fog.near = 10;
+    scene.fog.far = 28;
+    scene.background.setHex(0x041a3a);
+} else {
+    waterOverlayEl.style.display = 'none';
+    scene.fog.color.setHex(0xa0e6ff);
+    scene.fog.near = 55;
+    scene.fog.far = 65;
+    scene.background.setHex(0xa0e6ff);
+}
+
+// Animar jugadores remotos
+const tAnim = performance.now() / 1000;
+remotePlayers.forEach((entry) => {
+    if (!entry.head || !entry.upper) return;
+    const colocando = entry.placingTimer > 0;
+
+    // Bajar el modelo entero al agacharse (~0.25 bloques, igual que Bedrock)
+    if (entry.yOffset === undefined) entry.yOffset = 0;
+    
+
+    // Inclinar torso completo (cuerpo + brazos + cabeza juntos) desde la cadera
+    const tiltTarget = entry.sneaking ? 0.28 : entry.sprinting ? -0.2618 : 0;
+    entry.upper.rotation.x += (tiltTarget - entry.upper.rotation.x) * 0.2;
+
+    // Cabeza: pitch real del jugador menos el tilt del torso → siempre mira al frente en el mundo
+    entry.head.rotation.x = (entry.headPitch || 0) - entry.upper.rotation.x;
+    entry.head.rotation.y = 0;
+
+    // Piernas: ligera apertura lateral al agacharse
+    
+
+    entry.armR.rotation.z = 0;
+    entry.armL.rotation.z = 0;
+
+    if (colocando) {
+        entry.placingTimer -= delta / 30;
+        const prog = Math.max(0, entry.placingTimer / 0.3);
+        entry.armR.rotation.x = Math.sin((1 - prog) * Math.PI) * -1.2;
+    }
+
+    // Base de pose al agacharse: piernas y brazos doblados hacia adelante
+    const sneakBase = 0;
+
+    if (entry.moving) {
+        const freq  = entry.sneaking ? 6 : entry.sprinting ? 12 : 8;
+        const amp   = entry.sneaking ? 0.25 : entry.sprinting ? 0.67 : 0.52;
+        const swing = Math.sin(tAnim * freq) * amp;
+        entry.legR.rotation.x = sneakBase + swing;
+        entry.legL.rotation.x = sneakBase - swing;
+        if (!colocando) entry.armR.rotation.x = sneakBase - swing;
+        entry.armL.rotation.x = sneakBase + swing;
+    } else if (!colocando) {
+        // Interpolar suavemente hacia posición sneak o neutral
+        entry.legR.rotation.x += (sneakBase - entry.legR.rotation.x) * 0.2;
+        entry.legL.rotation.x += (sneakBase - entry.legL.rotation.x) * 0.2;
+        entry.armR.rotation.x += (sneakBase - entry.armR.rotation.x) * 0.2;
+        entry.armL.rotation.x += (sneakBase - entry.armL.rotation.x) * 0.2;
+    }
+});
+            
+            hitFrame++;
+
+actualizarPointer();
+raycaster.setFromCamera(pointer, camera);
+cachedSelectionHits = raycaster.intersectObjects(getMeshesActivos());
+
+const selectionHits = cachedSelectionHits || [];
+
+const hit = selectionHits
+    .filter(h => {
+        if (h.object instanceof THREE.InstancedMesh) {
+            const rotos = brokenInstances.get(h.object);
+            return !(rotos && rotos.has(h.instanceId));
+        }
+        return true;
+    })
+    .sort((a, b) => a.distance - b.distance)[0];
+
+if (!hit) {
+    outline.visible = false;
+}
+
+            if (hit && hit.distance <= 4.5) {
+    outline.visible = true;
+
+    if (hit.object instanceof THREE.InstancedMesh) {
+        hit.object.getMatrixAt(hit.instanceId, tempMatrix);
+        outline.position.setFromMatrixPosition(tempMatrix);
+        outline.rotation.set(0, 0, 0);
+    } else if (hit.object.userData.isChunk) {
+        const n = hit.face.normal;
+        outline.position.set(
+            Math.round(hit.point.x - n.x * 0.5),
+            Math.round(hit.point.y - n.y * 0.5),
+            Math.round(hit.point.z - n.z * 0.5)
+        );
+        outline.rotation.set(0, 0, 0);
+    } else {
+        outline.position.copy(hit.object.position);
+        outline.rotation.copy(hit.object.rotation);
+    }
+} else {
+    outline.visible = false;
+}
+
+            // Interpolación suave de la cámara al agacharse/levantarse
+            
+const sneakOffsetTarget = sneakActivo ? SNEAK_OFFSET : 0;
+sneakOffsetActual += (sneakOffsetTarget - sneakOffsetActual) * 0.35;
+
+            const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const rgt = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            fwd.y = 0; rgt.y = 0; fwd.normalize(); rgt.normalize();
+            const joyMag = Math.sqrt(moveX * moveX + moveZ * moveZ);
+            const joyNormX = joyMag > 0 ? moveX / joyMag : 0;
+            const joyNormZ = joyMag > 0 ? moveZ / joyMag : 0;
+            const flySpeed = 0.30, flySprintSpeed = 0.55;
+            const speedToUse = volarActivo
+                ? (sprintActivo ? flySprintSpeed : flySpeed)
+                : (sprintActivo ? sprintSpeed : sneakActivo ? 0.07 : moveSpeed);
+
+            // Protección de borde al agacharse
+            const step = new THREE.Vector3().addScaledVector(fwd, -joyNormZ * speedToUse * delta).addScaledVector(rgt, joyNormX * speedToUse * delta);
+
+            if (sneakActivo && step.length() > 0) {
+                const fwd2 = new THREE.Vector3(step.x, 0, step.z).normalize();
+                const nextX = camera.position.x + fwd2.x * 0.38;
+const nextZ = camera.position.z + fwd2.z * 0.38;
+                // Raycast desde los PIES del jugador (no desde los ojos)
+                const piesY = camera.position.y - 1.62;
+                const origenActual = new THREE.Vector3(camera.position.x, piesY + 0.5, camera.position.z);
+                const origenSiguiente = new THREE.Vector3(nextX, piesY + 0.5, nextZ);
+                const meshes = getMeshesSolidos();
+                const filtroSneak = h => !(h.object instanceof THREE.InstancedMesh && brokenInstances.get(h.object)?.has(h.instanceId));
+                const currentFloor = new THREE.Raycaster(
+                    origenActual, new THREE.Vector3(0, -1, 0), 0, 1.5
+                ).intersectObjects(meshes).filter(filtroSneak);
+                const nextFloor = new THREE.Raycaster(
+                    origenSiguiente, new THREE.Vector3(0, -1, 0), 0, 1.5
+                ).intersectObjects(meshes).filter(filtroSneak);
+                const currentY = currentFloor.length > 0 ? currentFloor[0].point.y : -999;
+                const nextY = nextFloor.length > 0 ? nextFloor[0].point.y : -999;
+                // Bloquear solo si hay un borde real (caída mayor a 0.5 bloques)
+                if (nextFloor.length === 0 || currentY - nextY > 0.5) {
+                    step.set(0, 0, 0);
+                }
+            }
+            
+            
+
+            if (step.length() > 0) {
+    const pR = sneakActivo ? 0.16 : 0.30;
+    const activosMeshes = getMeshesSolidos();
+    const filtro = h => !(h.object instanceof THREE.InstancedMesh && brokenInstances.get(h.object)?.has(h.instanceId));
+
+    // 3 raycasts: pies, cintura y cabeza (hitbox reducido al agacharse)
+    const checkCollision = (dir) => {
+        const d = dir.clone().normalize();
+        const cabezaOffset = sneakActivo ? -0.2 : 0.1; // hitbox más bajo al agacharse
+        // Ajustar origen de pies según altura efectiva al agacharse
+        // Sin ajuste, el origen queda dentro del bloque del suelo y detecta falsas colisiones
+        const eyeHForCollision = sneakActivo ? 1.62 - SNEAK_OFFSET : 1.62;
+        const origenPies    = new THREE.Vector3(camera.position.x, camera.position.y - eyeHForCollision + 0.22, camera.position.z);
+        const origenCintura = new THREE.Vector3(camera.position.x, camera.position.y - 0.5, camera.position.z);
+        const origenCabeza  = new THREE.Vector3(camera.position.x, camera.position.y + cabezaOffset, camera.position.z);
+        _rayCol1.set(origenPies,    d); _rayCol1.near = 0; _rayCol1.far = pR;
+        _rayCol2.set(origenCintura, d); _rayCol2.near = 0; _rayCol2.far = pR;
+        _rayCol3.set(origenCabeza,  d); _rayCol3.near = 0; _rayCol3.far = pR;
+        const h1 = _rayCol1.intersectObjects(activosMeshes).filter(filtro);
+        const h2 = _rayCol2.intersectObjects(activosMeshes).filter(filtro);
+        const h3 = _rayCol3.intersectObjects(activosMeshes).filter(filtro);
+        return h1.length > 0 || h2.length > 0 || h3.length > 0;
+    };
+
+    // Auto-step: si hay colisión lateral pero el bloque es de 1 altura, subir automáticamente
+    const tryStep = (axis) => {
+        const dir = axis === 'x' ? new THREE.Vector3(step.x, 0, 0) : new THREE.Vector3(0, 0, step.z);
+        if (!checkCollision(dir)) {
+            if (axis === 'x') camera.position.x += step.x;
+            else camera.position.z += step.z;
+            return;
+        }
+        // Auto-step siempre, igual que Bedrock
+        if (!isJumping) {
+            const stepHeight = 1.0;
+            const dirN = dir.clone().normalize();
+                        // Verificar que hay espacio arriba del bloque para el cuerpo y la cabeza
+            const origenPiesArriba = new THREE.Vector3(camera.position.x + dirN.x * pR, camera.position.y - 1.4 + stepHeight, camera.position.z + dirN.z * pR);
+            const origenCabArriba = new THREE.Vector3(camera.position.x + dirN.x * pR, camera.position.y + 0.4, camera.position.z + dirN.z * pR);
+            
+            // Rayos verticales para detectar techos bajos en el destino
+            // Rayo desde la cabeza hacia arriba en el destino para detectar techo
+            // Verificar espacio libre de 2 bloques encima del destino
+            const destinoX = camera.position.x + dirN.x * pR;
+            const destinoZ = camera.position.z + dirN.z * pR;
+            const cabezaDestino = new THREE.Vector3(destinoX, camera.position.y + 0.2, destinoZ);
+            const techoRay = new THREE.Raycaster(cabezaDestino, new THREE.Vector3(0, 1, 0), 0, 0.3);
+            const hTecho = techoRay.intersectObjects(activosMeshes).filter(filtro);
+            // También verificar bloque justo encima de la cabeza actual en destino
+            const bloqueEncima = new THREE.Vector3(destinoX, camera.position.y - 0.5, destinoZ);
+            const techoRay2 = new THREE.Raycaster(bloqueEncima, new THREE.Vector3(0, 1, 0), 0, 1.5);
+            const hTecho2 = techoRay2.intersectObjects(activosMeshes).filter(filtro);
+            
+            const hArriba1 = new THREE.Raycaster(origenPiesArriba, dirN, 0, pR).intersectObjects(activosMeshes).filter(filtro);
+            const hArriba2 = new THREE.Raycaster(origenCabArriba, dirN, 0, pR).intersectObjects(activosMeshes).filter(filtro);
+            // Verificar que el bloque debajo existe (hay suelo donde vamos a subir)
+
+            const origenSuelo = new THREE.Vector3(
+                camera.position.x + dirN.x * pR,
+                camera.position.y,
+                camera.position.z + dirN.z * pR
+            );
+            const hSuelo = new THREE.Raycaster(origenSuelo, new THREE.Vector3(0, -1, 0), 0, 2.5).intersectObjects(activosMeshes).filter(filtro);
+            // Verificar que no hay techo encima del jugador en su posición ACTUAL
+            const techoActual = new THREE.Raycaster(
+                new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z),
+                new THREE.Vector3(0, 1, 0), 0, 0.4
+            );
+            const hTechoActual = techoActual.intersectObjects(activosMeshes).filter(filtro);
+            const enSuelo = !isJumping && velocityY <= 0;
+            if (enSuelo && !sneakActivo && hArriba1.length === 0 && hArriba2.length === 0 && hTecho.length === 0 && hTecho2.length === 0 && hTechoActual.length === 0 && hSuelo.length > 0) {
+                velocityY = jumpForce;
+                isJumping = true;
+                if (axis === 'x') camera.position.x += step.x;
+                else camera.position.z += step.z;
+            }
+        }
+    };
+
+    tryStep('x');
+    tryStep('z');
+}
+
+                        // APLICACIÓN DE GRAVEDAD DINÁMICA
+            if (volarActivo) {
+    if (jumpPressed) {
+        velocityY = 0.28;
+    } else if (sneakPressed) {
+        velocityY = -0.28;
+    } else {
+        velocityY *= 0.8;
+    }
+} else {
+    if (jumpPressed && !isJumping) {
+        velocityY = jumpForce;
+        isJumping = true;
+    }
+    velocityY += gravity * delta;
+    if (velocityY < -4.5) velocityY = -4.5;
+}
+
+// Detección de techo
+if (velocityY > 0) {
+    const ceilRay = new THREE.Raycaster(camera.position, new THREE.Vector3(0, 1, 0), 0, HEAD_CLEARANCE);
+    const ceilHits = ceilRay.intersectObjects(getMeshesSolidos()).filter(h => 
+        !(h.object instanceof THREE.InstancedMesh && brokenInstances.get(h.object)?.has(h.instanceId))
+    );
+    if (ceilHits.length > 0) {
+        velocityY = 0; // Para el salto inmediatamente
+    }
+} // Velocidad terminal máxima
+            camera.position.y += velocityY;
+
+
+                        // Nueva detección de suelo mejorada
+            const floorDist = Math.max(2.5, Math.abs(velocityY) + 2);
+const floorRay = new THREE.Raycaster(camera.position, new THREE.Vector3(0,-1,0), 0, floorDist);
+const bloquesCercanos = manualBlocks.filter(b =>
+    Math.abs(b.position.x - camera.position.x) <= 2 &&
+    Math.abs(b.position.z - camera.position.z) <= 2
+);
+const floorHits = floorRay.intersectObjects([...getChunkMeshes(), ...bloquesCercanos]).filter(h =>
+    !(h.object instanceof THREE.InstancedMesh && brokenInstances.get(h.object)?.has(h.instanceId))
+);
+
+            if ((!volarActivo || velocityY < 0) && floorHits.length > 0) {
+    const surfaceY = floorHits[0].point.y;
+    const physFeetY = camera.position.y - 1.62 + (sneakActivo ? SNEAK_OFFSET : 0);
+
+    if (velocityY <= 0 && physFeetY <= surfaceY + 0.1) {
+        camera.position.y = surfaceY + 1.62 - sneakOffsetActual;
+        velocityY = 0;
+        isJumping = false;
+    }
+}
+            
+            // Sistema anti-entierro
+            if ((!volarActivo || velocityY < 0) && floorHits.length > 0 && camera.position.y - 1.62 + (sneakActivo ? SNEAK_OFFSET : 0) < floorHits[0].point.y) {
+    camera.position.y = floorHits[0].point.y + 1.62 - sneakOffsetActual;
+} else if (!volarActivo && camera.position.y - 1.62 < -64) {
+    camera.position.y = -64 + 1.62;
+    velocityY = 0;
+    isJumping = false;
+}
+
+
+            
+
+// Detectar si el jugador está bajo techo
+// Revisamos luz desde 6 direcciones como Minecraft
+// Nivel de luz 0-15 estilo Minecraft
+// Nivel de luz estilo Minecraft: cuenta bloques encima
+// Solo calcular luz cada 10 frames
+if (!animate.frameCount) animate.frameCount = 0;
+animate.frameCount++;
+
+
+
+if (animate.frameCount % 30 === 0) {
+    actualizarChunks();
+    // ===== TODO: SISTEMA DE ILUMINACIÓN ESTILO BEDROCK =====
+    // Para implementar correctamente necesitarías:
+    //
+    // 1. MAPA DE LUZ POR CHUNK:
+    //    Al generar cada chunk, calcular skyLight[x][y][z] (0-15)
+    //    Un bloque tiene skyLight=15 si no hay ningún bloque sólido encima hasta Y=255
+    //    Por cada bloque sólido encima, reducir 1 nivel (hasta 0)
+    //
+    // 2. PROPAGACIÓN LATERAL:
+    //    La luz se propaga a los 6 vecinos con valor = actual - 1
+    //    Usar flood fill (BFS) desde todos los bloques con skyLight=15
+    //
+    // 3. BRILLO FINAL POR CARA:
+    //    brightness = (skyLight / 15) * brilloPorCara
+    //    Donde brilloPorCara es B_TOP, B_NS, B_EW, B_BOTTOM
+    //
+    // 4. APLICAR POR INSTANCIA (InstancedMesh):
+    //    Usar mesh.setColorAt(instanceId, color) con el brillo calculado
+    //    Requiere activar mesh.instanceColor = new THREE.InstancedBufferAttribute(...)
+    //
+    // 5. RECALCULAR AL ROMPER/COLOCAR BLOQUES:
+    //    Solo recalcular los bloques afectados (radio ~15 bloques alrededor)
+    //    No recalcular todo el chunk, solo la columna afectada
+    //
+    // 6. HOJAS Y VIDRIO:
+    //    Filtran 1 nivel de luz en vez de bloquearlo todo
+    //    Bedrock usa lightFilter=1 para estos bloques
+}
+
+for (let i = sandBlocks.length - 1; i >= 0; i--) {
+    const sb = sandBlocks[i];
+
+    // Si ya está quieta, no hacer nada
+    if (!sb.userData.falling) continue;
+
+    const obstaculos = manualBlocks.filter(b =>
+        b !== sb &&
+        Math.abs(b.position.x - sb.position.x) <= 2 &&
+        Math.abs(b.position.z - sb.position.z) <= 2
+    );
+    const downRay = new THREE.Raycaster(
+        new THREE.Vector3(sb.position.x, sb.position.y + 2, sb.position.z),
+        new THREE.Vector3(0, -1, 0),
+        0, 100
+    );
+    const hits = downRay.intersectObjects([...getChunkMeshes(), ...obstaculos]).filter(h =>
+        !(h.object instanceof THREE.InstancedMesh && brokenInstances.get(h.object)?.has(h.instanceId))
+    );
+    const targetY = hits.length > 0 ? hits[0].point.y + 0.5 : -20;
+    if (sb.position.y > targetY + 0.01) {
+        sb.position.y -= 0.15 * delta;
+        if (sb.position.y < targetY) sb.position.y = targetY;
+    } else {
+        // Llegó al destino, marcarla como quieta
+        sb.userData.falling = false;
+    }
+    if (sb.position.y < -15) {
+        scene.remove(sb);
+        const mi = manualBlocks.indexOf(sb);
+        if (mi !== -1) manualBlocks.splice(mi, 1);
+        sandBlocks.splice(i, 1);
+    }
+}
+renderer.render(scene, camera);
+        }
+
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            joyRect = container.getBoundingClientRect();
+        });
+
+        cargarPosicionesControles();
+        
+        animate();
+        // Inicializar Steve preview en pantalla principal
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (document.getElementById('pantalla-principal').classList.contains('activa')) {
+                    initStevePrevio();
+                }
+            }, 500);
+        });
+        window.abrirVestidor = function() {
+    
+    // Aquí irá la lógica de selección de skins
+};
+
+// ===== VESTIDOR =====
+const skinOptions = [
+    { nombre: 'Kevin', archivo: 'kevin.png' },
+    { nombre: 'Kiore', archivo: 'kiore.png' },
+    { nombre: 'Palvox', archivo: 'palvox.png' },
+    { nombre: 'Rainbow', archivo: 'rainbow.png' },
+    { nombre: 'Skinss', archivo: 'skinss.png' }
+];
+let skinSeleccionada = 'kevin.png';
+let vestRenderer = null;
+let vestScene = null;
+let vestCamera = null;
+let vestSteve = null;
+let vestAnimId = null;
+
+window.abrirVestidor = function() {
+    skinSeleccionada = localStorage.getItem('skinSeleccionada') || 'kevin.png';
+    
+    document.getElementById('pantalla-principal').classList.remove('activa');
+    document.getElementById('pantalla-vestidor').classList.add('activa');
+    renderer.domElement.style.display = 'none';
+    renderizarListaSkins();
+    setTimeout(() => initSteveVestidor(), 200);
+}
+
+window.cerrarVestidor = function() {
+    document.getElementById('pantalla-vestidor').classList.remove('activa');
+    document.getElementById('pantalla-principal').classList.add('activa');
+    renderer.domElement.style.display = 'block';
+    if (vestAnimId) cancelAnimationFrame(vestAnimId);
+    if (vestRenderer) vestRenderer.dispose();
+};
+
+function renderizarListaSkins() {
+    const lista = document.getElementById('vest-lista-skins');
+    lista.innerHTML = '';
+    skinOptions.forEach(skin => {
+        const div = document.createElement('div');
+        div.className = 'vest-skin-item';
+        if (skin.archivo === skinSeleccionada) div.classList.add('seleccionado');
+        div.textContent = skin.nombre;
+        div.onclick = () => seleccionarSkin(skin.archivo);
+        lista.appendChild(div);
+    });
+}
+
+function seleccionarSkin(archivo) {
+    skinSeleccionada = archivo;
+    renderizarListaSkins();
+    recargarSteveVestidor();
+}
+
+function initSteveVestidor() {
+    if (vestAnimId) cancelAnimationFrame(vestAnimId);
+    if (vestRenderer) { vestRenderer.dispose(); vestRenderer = null; }
+
+    const contenedor = document.getElementById('vest-derecha');
+    if (!contenedor) return;
+
+    // Eliminar canvas viejo si existe
+    const viejo = document.getElementById('vest-steve-canvas');
+    if (viejo) viejo.remove();
+
+    const w = Math.floor(contenedor.clientWidth || window.innerWidth * 0.45);
+    const h = Math.floor(contenedor.clientHeight || window.innerHeight * 0.7);
+
+    const cv = document.createElement('canvas');
+    cv.id = 'vest-steve-canvas';
+    cv.width = w;
+    cv.height = h;
+    cv.style.width = w + 'px';
+    cv.style.height = h + 'px';
+    cv.style.display = 'block';
+    contenedor.appendChild(cv);
+
+    vestRenderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+    vestRenderer.setSize(w, h);
+    vestRenderer.setPixelRatio(window.devicePixelRatio);
+    vestRenderer.setClearColor(0x000000, 0);
+
+    vestScene = new THREE.Scene();
+    vestCamera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
+    vestCamera.position.set(0, 0.8, 3.2);
+    vestCamera.lookAt(0, 1, 0);
+
+    vestScene.add(new THREE.AmbientLight(0xffffff, 1.3));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(2, 1.5, 1.5);
+    vestScene.add(dirLight);
+
+    const textura = texturasSkins[skinSeleccionada];
+    vestSteve = crearSteve(textura);
+    vestScene.add(vestSteve.group);
+    vestSteve.group.scale.set(1.0, 1.0, 1.0);
+
+    function animVest() {
+        vestAnimId = requestAnimationFrame(animVest);
+        vestSteve.group.rotation.y += 0.008;
+        vestRenderer.render(vestScene, vestCamera);
+    }
+    animVest();
+}
+
+window.recargarSteveVestidor = function() {
+    if (!vestSteve) return;
+    vestScene.remove(vestSteve.group);
+    const textura = texturasSkins[skinSeleccionada];
+    vestSteve = crearSteve(textura);
+    vestScene.add(vestSteve.group);
+    vestSteve.group.scale.set(1.0, 1.0, 1.0);
+}
+
+window.confirmarSkinVestidor = function() {
+    localStorage.setItem('skinSeleccionada', skinSeleccionada);
+    
+    if (ppSteve && ppScene) {
+        ppScene.remove(ppSteve.group);
+        const textura = texturasSkins[skinSeleccionada] || texSteve;
+        ppSteve = crearSteve(textura);
+        ppScene.add(ppSteve.group);
+        ppSteve.group.scale.set(0.35, 0.35, 0.35);
+    }
+    
+    cerrarVestidor();
+}
+
+    </script>
+    <style>
+@keyframes panorama-slide {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+@keyframes barra-pixel {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+#pantalla-carga, #pantalla-guardado {
+    font-family: 'Courier New', monospace;
+    image-rendering: pixelated;
+}
+#pantalla-carga {
+    background: #1a1a2e;
+    animation: panorama-slide 20s linear infinite alternate;
+    background-size: 400% 400%;
+    background-image: linear-gradient(135deg,
+        #1a3a1a 0%, #0d2b0d 15%,
+        #1a2a3a 30%, #0d1b2b 45%,
+        #2a1a0d 60%, #1b0d05 75%,
+        #0d1a2a 90%, #1a3a2a 100%
+    );
+}
+#pantalla-guardado {
+    background-image: linear-gradient(135deg,
+        #1a3a1a 0%, #0d2b0d 15%,
+        #1a2a3a 30%, #0d1b2b 45%,
+        #2a1a0d 60%, #1b0d05 75%,
+        #0d1a2a 90%, #1a3a2a 100%
+    );
+    background-size: 400% 400%;
+    animation: panorama-slide 20s linear infinite alternate;
+}
+.mc-logo {
+    font-size: clamp(32px,9vw,64px);
+    font-weight: 900;
+    color: #fff;
+    text-shadow:
+        3px 3px 0 #555,
+        -2px -2px 0 #333,
+        4px 4px 0 #000;
+    letter-spacing: 4px;
+    margin-bottom: 28px;
+    text-transform: uppercase;
+}
+.mc-caja-outer {
+    background: #c6c6c6;
+    border-right: 4px solid #555;
+    border-bottom: 4px solid #555;
+    border-left: 4px solid #fff;
+    border-top: 4px solid #fff;
+    width: clamp(280px, 78vw, 560px);
+    padding: 0;
+}
+.mc-caja-titulo {
+    text-align: center;
+    padding: 7px 0;
+    font-size: clamp(11px, 2.5vw, 14px);
+    color: #3a3a3a;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #aaa;
+}
+.mc-caja-inner {
+    background: #141414;
+    margin: 5px;
+    padding: clamp(12px,3vw,20px) clamp(12px,3vw,20px);
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.mc-tip {
+    color: #fff;
+    font-size: clamp(11px, 2.6vw, 15px);
+    line-height: 1.5;
+    margin-bottom: 18px;
+    flex: 1;
+}
+.mc-barra-bg {
+    width: 100%;
+    height: 12px;
+    background: #1a1a1a;
+    border-top: 2px solid #000;
+    border-left: 2px solid #000;
+    border-right: 2px solid #555;
+    border-bottom: 2px solid #555;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+#barra-progreso-inner {
+    height: 100%;
+    width: 0%;
+    background: repeating-linear-gradient(
+        90deg,
+        #5aff3a 0px, #5aff3a 6px,
+        #2db81a 6px, #2db81a 10px,
+        #1a7a0a 10px, #1a7a0a 12px
+    );
+    image-rendering: pixelated;
+    animation: barra-pixel 1s steps(2) infinite;
+}
+.mc-guardado-icono {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 8px;
+}
+.mc-bloque {
+    width: 40px; height: 40px;
+    background: #c8a050;
+    border-top: 4px solid #e8c070;
+    border-left: 4px solid #e8c070;
+    border-right: 4px solid #7a5a18;
+    border-bottom: 4px solid #7a5a18;
+    image-rendering: pixelated;
+}
+.mc-flecha {
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 16px solid #e8c070;
+    margin-top: 3px;
+}
+</style>
+
+<!-- PANTALLA DE CARGA -->
+<div id="pantalla-carga" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; flex-direction:column; align-items:center; justify-content:center;">
+    <div class="mc-logo">MINECRAFT CLONE</div>
+    <div class="mc-caja-outer">
+        <div class="mc-caja-titulo">Cargando.</div>
+        <div class="mc-caja-inner">
+            <div id="carga-tip" class="mc-tip"></div>
+            <div class="mc-barra-bg">
+                <div id="barra-progreso-inner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PANTALLA DE GUARDADO -->
+<div id="pantalla-guardado" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; flex-direction:column; align-items:center; justify-content:center;">
+    <div class="mc-logo">MINECRAFT CLONE</div>
+    <div class="mc-caja-outer">
+        <div class="mc-caja-titulo">Guardando mundo</div>
+        <div class="mc-caja-inner" style="align-items:center; justify-content:center; padding:28px;">
+            <div style="color:#fff; font-size:clamp(13px,3vw,16px); margin-bottom:14px;">¡Hecho!</div>
+            <div class="mc-guardado-icono">
+                <div class="mc-bloque"></div>
+                <div class="mc-flecha"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

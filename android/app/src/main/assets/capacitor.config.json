@@ -1,0 +1,8 @@
+{
+	"appId": "com.htmino.minecraft",
+	"appName": "Minecraft Clone",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "http"
+	}
+}
