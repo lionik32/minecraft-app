@@ -11,13 +11,10 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies and sync
+      - name: Copiar www a assets
         run: |
-          npm install
-          npx cap sync android
+          rm -rf android/app/src/main/assets/public
+          cp -r www android/app/src/main/assets/public
       - name: Build APK
         run: |
           cd android
